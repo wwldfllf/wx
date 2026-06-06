@@ -6,7 +6,12 @@ export function onRequestGet({ env }) {
   return json({
     ok: Boolean(config.apiBaseUrl && config.apiKey),
     configured: Boolean(config.apiBaseUrl && config.apiKey),
-    baseUrl: config.apiBaseUrl ? maskHost(config.apiBaseUrl) : null
+    baseUrl: config.apiBaseUrl ? maskHost(config.apiBaseUrl) : null,
+    variables: {
+      IMAGE_API_BASE_URL: Boolean(config.apiBaseUrl),
+      IMAGE_API_KEY: Boolean(config.apiKey),
+      IMAGE_MODEL: config.defaultModel
+    }
   });
 }
 
