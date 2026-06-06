@@ -227,7 +227,7 @@ async function generateImage() {
     const body = await readResponseBody(response);
 
     if (!response.ok) {
-      throw new Error(body.error || `生成失败，HTTP ${response.status}。`);
+      throw new Error(formatGenerateError(response.status, body.error));
     }
 
     const image = body.images?.[0];
@@ -290,6 +290,18 @@ function hideMessage() {
   elements.messageBox.hidden = true;
   elements.messageBox.textContent = "";
   elements.messageBox.classList.remove("error");
+}
+
+function formatGenerateError(status, message) {
+  if (status === 502) {
+    return `上游图片接口返回 502，通常是 API 网关或模型服务暂时不可用。${message ? `详情：${message}` : ""}`;
+  }
+
+  if (status === 504) {
+    return `上游图片接口生成超时。${message ? `详情：${message}` : ""}`;
+  }
+
+  return message || `生成失败，HTTP ${status}。`;
 }
 
 function setStatus(type, text) {

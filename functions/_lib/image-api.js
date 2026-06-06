@@ -281,16 +281,32 @@ async function readJson(response) {
 
 function createApiError(response, body, fallbackMessage) {
   const message =
-    body?.error?.message ||
-    body?.message ||
-    body?.error ||
-    body?.text ||
-    fallbackMessage;
+    response.status === 502
+      ? "Upstream image API returned 502 Bad Gateway."
+      : response.status === 504
+        ? "Upstream image API timed out."
+        : body?.error?.message ||
+          body?.message ||
+          body?.error ||
+          body?.text ||
+          fallbackMessage;
 
   const error = new Error(String(message));
   error.status = response.status >= 400 && response.status < 600 ? response.status : 500;
-  error.details = body;
+  error.details = summarizeErrorDetails(body);
   return error;
+}
+
+function summarizeErrorDetails(body) {
+  if (!body) return undefined;
+
+  if (typeof body.text === "string") {
+    return {
+      text: body.text.replace(/\s+/g, " ").trim().slice(0, 240)
+    };
+  }
+
+  return body;
 }
 
 function toDataUrl(value, format) {

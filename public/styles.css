@@ -336,6 +336,10 @@ select:focus {
   text-align: center;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .empty-icon {
   display: grid;
   place-items: center;
