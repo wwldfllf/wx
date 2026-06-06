@@ -1,3 +1,5 @@
+const UPSTREAM_TIMEOUT_MS = 85000;
+
 export const jsonHeaders = {
   "Content-Type": "application/json; charset=utf-8",
   "Cache-Control": "no-store"
@@ -25,7 +27,7 @@ export function assertConfigured(config) {
   if (!config.apiBaseUrl || !config.apiKey) {
     return json(
       {
-        error: "Cloudflare 环境变量尚未配置 IMAGE_API_BASE_URL 或 IMAGE_API_KEY。"
+        error: "Cloudflare environment variables IMAGE_API_BASE_URL or IMAGE_API_KEY are not configured."
       },
       { status: 500 }
     );
@@ -49,7 +51,7 @@ export async function fetchModels(config) {
   const body = await readJson(response);
 
   if (!response.ok) {
-    throw createApiError(response, body, "无法从后端 API 探测模型列表。");
+    throw createApiError(response, body, "Could not detect model list from upstream API.");
   }
 
   return Array.isArray(body.data) ? body.data : [];
@@ -138,7 +140,7 @@ export async function createImage(config, { model, prompt, size, quality, output
 
   const body = await readJson(response);
   if (!response.ok) {
-    throw createApiError(response, body, "文生图请求失败。");
+    throw createApiError(response, body, "Text-to-image request failed.");
   }
 
   return body;
@@ -160,7 +162,7 @@ export async function createImageEdit(config, { image, model, prompt, size, qual
 
   const body = await readJson(response);
   if (!response.ok) {
-    throw createApiError(response, body, "图加文生图请求失败。");
+    throw createApiError(response, body, "Image-plus-text request failed.");
   }
 
   return body;
@@ -242,14 +244,29 @@ function isGptImageModel(model) {
     .includes("gpt-image");
 }
 
-function apiFetch(config, endpoint, options) {
-  return fetch(`${config.apiBaseUrl}${endpoint}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      ...(options.headers || {})
+async function apiFetch(config, endpoint, options) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+
+  try {
+    return await fetch(`${config.apiBaseUrl}${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        ...(options.headers || {})
+      }
+    });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("Upstream image API timed out. Try a lower quality or a smaller image size.");
+      timeoutError.status = 504;
+      throw timeoutError;
     }
-  });
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function readJson(response) {

@@ -1,3 +1,5 @@
+const GENERATE_TIMEOUT_MS = 90000;
+
 const state = {
   capabilities: null,
   selectedImage: null,
@@ -86,8 +88,10 @@ function bindEvents() {
 
 async function loadCapabilities() {
   try {
-    const response = await fetch("/api/capabilities");
-    const body = await response.json();
+    const response = await fetch("/api/capabilities", {
+      headers: { Accept: "application/json" }
+    });
+    const body = await readResponseBody(response);
 
     if (!response.ok) {
       throw new Error(body.error || "后端能力探测失败。");
@@ -104,14 +108,14 @@ async function loadCapabilities() {
     const fallback = {
       models: [
         {
-          id: "gpt-image-1",
-          label: "gpt-image-1",
-          sizes: ["1024x1024", "1024x1536", "1536x1024", "auto"],
+          id: "gpt-image-2",
+          label: "gpt-image-2",
+          sizes: ["auto", "1024x1024", "1536x1024", "1024x1536", "1536x864", "864x1536"],
           qualities: ["auto", "low", "medium", "high"],
           formats: ["png", "jpeg", "webp"]
         }
       ],
-      defaultModel: "gpt-image-1"
+      defaultModel: "gpt-image-2"
     };
 
     state.capabilities = fallback;
@@ -198,6 +202,9 @@ async function generateImage() {
   setLoading(true);
   hideMessage();
 
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), GENERATE_TIMEOUT_MS);
+
   try {
     const formData = new FormData();
     formData.append("prompt", prompt);
@@ -212,13 +219,15 @@ async function generateImage() {
 
     const response = await fetch("/api/generate", {
       method: "POST",
-      body: formData
+      body: formData,
+      signal: controller.signal,
+      headers: { Accept: "application/json" }
     });
 
-    const body = await response.json();
+    const body = await readResponseBody(response);
 
     if (!response.ok) {
-      throw new Error(body.error || "生成失败。");
+      throw new Error(body.error || `生成失败，HTTP ${response.status}。`);
     }
 
     const image = body.images?.[0];
@@ -232,8 +241,13 @@ async function generateImage() {
       showMessage(`模型优化后的提示词：${image.revisedPrompt}`);
     }
   } catch (error) {
-    showMessage(error.message, "error");
+    const message =
+      error.name === "AbortError"
+        ? "生成超过 90 秒未完成。请降低清晰度、换小比例，或稍后重试。"
+        : error.message;
+    showMessage(message, "error");
   } finally {
+    window.clearTimeout(timeoutId);
     setLoading(false);
   }
 }
@@ -250,13 +264,19 @@ function showResult(src, format) {
 function setLoading(isLoading) {
   elements.submitButton.disabled = isLoading;
   elements.loadingState.hidden = !isLoading;
+  elements.submitButton.querySelector("span:last-child").textContent = isLoading ? "正在生成" : "生成图片";
 
   if (isLoading) {
     elements.emptyState.hidden = true;
     elements.resultImage.hidden = true;
     elements.downloadButton.hidden = true;
-  } else if (!elements.resultImage.src) {
+  } else if (elements.resultImage.src) {
+    elements.resultImage.hidden = false;
+    elements.emptyState.hidden = true;
+    elements.downloadButton.hidden = false;
+  } else {
     elements.emptyState.hidden = false;
+    elements.downloadButton.hidden = true;
   }
 }
 
@@ -276,6 +296,19 @@ function setStatus(type, text) {
   elements.statusPill.classList.remove("ready", "error");
   if (type) elements.statusPill.classList.add(type);
   elements.statusText.textContent = text;
+}
+
+async function readResponseBody(response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      error: text.slice(0, 300)
+    };
+  }
 }
 
 function formatBytes(bytes) {

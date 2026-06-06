@@ -22,7 +22,7 @@ export async function onRequestPost({ request, env }) {
     const image = formData.get("image");
 
     if (!prompt) {
-      return json({ error: "请先输入图片提示词。" }, { status: 400 });
+      return json({ error: "Please enter an image prompt first." }, { status: 400 });
     }
 
     const hasReferenceImage = image instanceof File && image.size > 0;
@@ -48,7 +48,7 @@ export async function onRequestPost({ request, env }) {
     if (!images.length) {
       return json(
         {
-          error: "图片接口已响应，但没有返回可显示的图片。",
+          error: "The image API responded but did not return a displayable image.",
           raw: result
         },
         { status: 502 }
@@ -64,7 +64,7 @@ export async function onRequestPost({ request, env }) {
   } catch (error) {
     return json(
       {
-        error: error.message || "生成失败，请稍后重试。",
+        error: error.message || "Generation failed. Please try again later.",
         details: error.details
       },
       { status: error.status || 500 }
