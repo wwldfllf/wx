@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image2 Studio</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Image2 Studio</p>
+          <h1>AI 图片生成工作台</h1>
+        </div>
+        <div class="status-pill" id="statusPill">
+          <span class="status-dot"></span>
+          <span id="statusText">正在连接后端</span>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <form class="control-panel" id="generateForm">
+          <div class="field">
+            <label for="prompt">提示词</label>
+            <textarea
+              id="prompt"
+              name="prompt"
+              rows="8"
+              placeholder="描述你想生成的画面、风格、主体、光线、构图和细节。"
+              required
+            ></textarea>
+          </div>
+
+          <div class="upload-zone" id="uploadZone">
+            <input id="imageInput" name="image" type="file" accept="image/png,image/jpeg,image/webp" />
+            <div class="upload-copy">
+              <strong>参考图</strong>
+              <span>可选，上传后使用图加文生成</span>
+            </div>
+            <button class="icon-button ghost" type="button" id="clearImageButton" title="移除参考图" disabled>
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+
+          <div class="preview-row" id="referencePreview" hidden>
+            <img id="referenceImage" alt="参考图预览" />
+            <div>
+              <strong id="referenceName">reference.png</strong>
+              <span id="referenceMeta">图加文模式</span>
+            </div>
+          </div>
+
+          <div class="param-grid">
+            <div class="field">
+              <label for="model">模型</label>
+              <select id="model" name="model"></select>
+            </div>
+
+            <div class="field">
+              <label for="size">比例</label>
+              <select id="size" name="size"></select>
+            </div>
+
+            <div class="field">
+              <label for="quality">清晰度</label>
+              <select id="quality" name="quality"></select>
+            </div>
+
+            <div class="field">
+              <label for="outputFormat">格式</label>
+              <select id="outputFormat" name="output_format"></select>
+            </div>
+          </div>
+
+          <button class="primary-button" id="submitButton" type="submit">
+            <span class="button-icon" aria-hidden="true">✦</span>
+            <span>生成图片</span>
+          </button>
+        </form>
+
+        <section class="result-panel" aria-live="polite">
+          <div class="result-header">
+            <div>
+              <p class="eyebrow">Result</p>
+              <h2>生成结果</h2>
+            </div>
+            <a class="download-button" id="downloadButton" href="#" download="image2-studio.png" hidden>
+              下载
+            </a>
+          </div>
+
+          <div class="result-stage" id="resultStage">
+            <div class="empty-state" id="emptyState">
+              <span class="empty-icon" aria-hidden="true">▧</span>
+              <p>图片会显示在这里</p>
+            </div>
+            <div class="loading-state" id="loadingState" hidden>
+              <div class="spinner"></div>
+              <p>正在生成，请稍候</p>
+            </div>
+            <img id="resultImage" alt="生成结果" hidden />
+          </div>
+
+          <div class="message-box" id="messageBox" hidden></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
