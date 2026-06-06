@@ -1,4 +1,4 @@
-const GENERATE_TIMEOUT_MS = 90000;
+const GENERATE_TIMEOUT_MS = 300000;
 
 const state = {
   capabilities: null,
@@ -243,7 +243,7 @@ async function generateImage() {
   } catch (error) {
     const message =
       error.name === "AbortError"
-        ? "生成超过 90 秒未完成。请降低清晰度、换小比例，或稍后重试。"
+        ? "生成超过 5 分钟未完成。请降低清晰度、换小比例，或稍后重试。"
         : error.message;
     showMessage(message, "error");
   } finally {

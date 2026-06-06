@@ -1,4 +1,4 @@
-const UPSTREAM_TIMEOUT_MS = 85000;
+const UPSTREAM_TIMEOUT_MS = 295000;
 
 export const jsonHeaders = {
   "Content-Type": "application/json; charset=utf-8",
