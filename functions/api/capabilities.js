@@ -31,7 +31,7 @@ export async function onRequestGet({ env }) {
   } catch (error) {
     return json({
       ...fallbackCapabilities(config.defaultModel),
-      warning: `模型探测失败，已使用默认能力表：${error.message}`
+      warning: `Model detection failed, using default options: ${error.message}`
     });
   }
 }
