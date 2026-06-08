@@ -46,6 +46,7 @@ const SIZE_LABELS = {
 
 const QUALITY_LABELS = {
   auto: "自动",
+  "gateway-default": "网关默认",
   low: "低",
   medium: "中",
   high: "高",
@@ -110,9 +111,9 @@ async function loadCapabilities() {
         {
           id: "gpt-image-2",
           label: "gpt-image-2",
-          sizes: ["auto", "1024x1024", "1536x1024", "1024x1536", "1536x864", "864x1536"],
-          qualities: ["auto", "low", "medium", "high"],
-          formats: ["png", "jpeg", "webp"]
+          sizes: ["1024x1024", "1536x1024", "1024x1536"],
+          qualities: ["gateway-default"],
+          formats: ["png"]
         }
       ],
       defaultModel: "gpt-image-2"

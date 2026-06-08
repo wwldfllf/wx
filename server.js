@@ -195,20 +195,9 @@ function createModelCapabilities(id) {
     return {
       id,
       label: id,
-      sizes: [
-        "auto",
-        "1024x1024",
-        "1536x1024",
-        "1024x1536",
-        "1536x864",
-        "864x1536",
-        "1440x1080",
-        "1080x1440",
-        "1536x768",
-        "768x1536"
-      ],
-      qualities: ["auto", "low", "medium", "high"],
-      formats: ["png", "jpeg", "webp"],
+      sizes: ["1024x1024", "1536x1024", "1024x1536"],
+      qualities: ["gateway-default"],
+      formats: ["png"],
       modes: ["text", "image"]
     };
   }
@@ -235,14 +224,20 @@ function createModelCapabilities(id) {
 }
 
 async function createImage({ model, prompt, size, quality, outputFormat }) {
-  const payload = compactObject({
-    model,
-    prompt,
-    size,
-    quality,
-    output_format: outputFormat,
-    n: 1
-  });
+  const payload = isGptImage2Model(model)
+    ? compactObject({
+        model,
+        prompt,
+        size: normalizeGptImage2Size(size)
+      })
+    : compactObject({
+        model,
+        prompt,
+        size,
+        quality,
+        output_format: outputFormat,
+        n: 1
+      });
 
   if (!isGptImageModel(model)) {
     payload.response_format = "b64_json";
@@ -268,11 +263,15 @@ async function createImageEdit({ image, model, prompt, size, quality, outputForm
   const form = new FormData();
   form.append("model", model);
   form.append("prompt", prompt);
-  appendOptionalFormValue(form, "size", size);
-  appendOptionalFormValue(form, "quality", quality);
-  appendOptionalFormValue(form, "output_format", outputFormat);
+  form.append("size", isGptImage2Model(model) ? normalizeGptImage2Size(size) : size);
+
+  if (!isGptImage2Model(model)) {
+    appendOptionalFormValue(form, "quality", quality);
+    appendOptionalFormValue(form, "output_format", outputFormat);
+  }
+
   form.append(
-    "image",
+    isGptImage2Model(model) ? "image[]" : "image",
     new Blob([image.buffer], { type: image.mimetype || "image/png" }),
     image.originalname || "reference.png"
   );
@@ -302,6 +301,17 @@ function isGptImageModel(model) {
   return String(model || "")
     .toLowerCase()
     .includes("gpt-image");
+}
+
+function isGptImage2Model(model) {
+  return String(model || "")
+    .toLowerCase()
+    .includes("gpt-image-2");
+}
+
+function normalizeGptImage2Size(size) {
+  const allowedSizes = new Set(["1024x1024", "1536x1024", "1024x1536"]);
+  return allowedSizes.has(size) ? size : "1024x1024";
 }
 
 function compactObject(object) {

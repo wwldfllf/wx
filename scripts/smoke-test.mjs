@@ -13,7 +13,8 @@ const checks = {
   hasResultStage: home.includes('id="resultStage"'),
   hasMobileLayout: styles.includes("@media (max-width: 840px)"),
   defaultModel: capabilities.defaultModel,
-  models: capabilities.models?.map((model) => model.id) || []
+  models: capabilities.models?.map((model) => model.id) || [],
+  image2Sizes: capabilities.models?.find((model) => model.id === "gpt-image-2")?.sizes || []
 };
 
 if (!checks.hasTitle || !checks.hasPrompt || !checks.hasUpload || !checks.hasResultStage) {
@@ -26,6 +27,10 @@ if (!checks.hasMobileLayout) {
 
 if (!checks.models.includes("gpt-image-2")) {
   throw new Error("能力探测没有返回 gpt-image-2。");
+}
+
+if (!checks.image2Sizes.includes("1536x1024") || checks.image2Sizes.includes("auto")) {
+  throw new Error("gpt-image-2 尺寸选项没有按网关教程配置。");
 }
 
 console.log(JSON.stringify(checks, null, 2));
