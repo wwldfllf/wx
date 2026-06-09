@@ -11,6 +11,7 @@ const checks = {
   hasPrompt: home.includes('id="prompt"'),
   hasUpload: home.includes('id="imageInput"'),
   hasResultStage: home.includes('id="resultStage"'),
+  hasVersionedAssets: home.includes("app.js?v=20260609-timeout5m") && home.includes("styles.css?v=20260609-timeout5m"),
   hasMobileLayout: styles.includes("@media (max-width: 840px)"),
   defaultModel: capabilities.defaultModel,
   models: capabilities.models?.map((model) => model.id) || [],
@@ -19,6 +20,10 @@ const checks = {
 
 if (!checks.hasTitle || !checks.hasPrompt || !checks.hasUpload || !checks.hasResultStage) {
   throw new Error("首页缺少关键 UI 节点。");
+}
+
+if (!checks.hasVersionedAssets) {
+  throw new Error("首页没有使用带版本号的 JS/CSS 资源。");
 }
 
 if (!checks.hasMobileLayout) {

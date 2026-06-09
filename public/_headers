@@ -1,0 +1,11 @@
+/*
+  Cache-Control: no-cache
+
+/app.js
+  Cache-Control: no-store
+
+/styles.css
+  Cache-Control: no-store
+
+/api/*
+  Cache-Control: no-store
