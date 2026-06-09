@@ -1,6 +1,6 @@
 export const IMAGE2_MODEL = "gpt-image-2";
 
-const DEFAULT_UPSTREAM_TIMEOUT_MS = 295000;
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 300000;
 
 export const jsonHeaders = {
   "Content-Type": "application/json; charset=utf-8",
@@ -292,7 +292,7 @@ async function apiFetch(config, endpoint, options) {
     return response;
   } catch (error) {
     if (error.name === "AbortError") {
-      const timeoutError = new Error("Upstream image API timed out. Try a lower quality or a smaller image size.");
+      const timeoutError = new Error("网站后端已按 5 分钟等待，但上游图片接口仍未返回结果。");
       timeoutError.status = 504;
       timeoutError.details = {
         endpoint,
@@ -320,9 +320,9 @@ async function readJson(response) {
 function createApiError(response, body, fallbackMessage) {
   const message =
     response.status === 502
-      ? "Upstream image API returned 502 Bad Gateway."
+      ? "上游图片接口返回 502，通常是 API 网关或模型服务暂时不可用。"
       : response.status === 504
-        ? "Upstream image API timed out."
+        ? "上游图片接口返回 504，生成请求被上游提前结束。"
         : body?.error?.message ||
           body?.message ||
           body?.error ||

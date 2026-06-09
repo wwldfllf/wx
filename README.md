@@ -33,10 +33,10 @@ Generation is pinned to `gpt-image-2` to match the Python examples in the gatewa
 Optional variable for slow image generations:
 
 ```env
-IMAGE_UPSTREAM_TIMEOUT_MS=295000
+IMAGE_UPSTREAM_TIMEOUT_MS=300000
 ```
 
-The value is in milliseconds. The default is 295000, which is just under 5 minutes. The app treats smaller values as 295000 and accepts larger values up to 900000.
+The value is in milliseconds. The default is 300000, which is 5 minutes. The app treats smaller values as 300000 and accepts larger values up to 900000.
 
 After adding or editing variables, redeploy the latest Production deployment. Cloudflare does not inject newly-added variables into an already-built deployment.
 

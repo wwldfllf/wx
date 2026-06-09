@@ -384,11 +384,23 @@ function formatGenerateError(status, message, details = {}) {
 
 function formatErrorDetails(message, details) {
   const parts = [];
-  if (message) parts.push(`详情：${message}`);
+  if (message) parts.push(`详情：${normalizeErrorMessage(message)}`);
   if (details?.endpoint) parts.push(`接口：${details.endpoint}`);
   if (details?.elapsedMs) parts.push(`已等待：${formatDuration(details.elapsedMs)}`);
   if (details?.timeoutMs) parts.push(`限制：${formatDuration(details.timeoutMs)}`);
   return parts.length ? parts.join("；") : "";
+}
+
+function normalizeErrorMessage(message) {
+  if (message === "Upstream image API timed out. Try a lower quality or a smaller image size.") {
+    return "网站后端已按 5 分钟等待，但上游图片接口仍未返回结果。";
+  }
+
+  if (message === "Upstream image API timed out.") {
+    return "上游图片接口返回 504，生成请求被上游提前结束。";
+  }
+
+  return message;
 }
 
 function formatDuration(ms) {
