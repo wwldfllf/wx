@@ -32,7 +32,7 @@ def main():
     if not api_key:
         raise SystemExit("Missing IMAGE_API_KEY or API_KEY. Set it in the environment or .env.")
 
-    base_url = args.base_url.rstrip("/")
+    base_url = normalize_base_url(args.base_url)
     if args.image:
         result = edit_image(base_url, api_key, args.model, args.prompt, args.size, args.image, args.timeout)
         prefix = "edited"
@@ -102,6 +102,13 @@ def edit_image(base_url, api_key, model, prompt, size, image_paths, timeout):
 
 def normalize_size(size):
     return size if size in ALLOWED_SIZES else "1024x1024"
+
+
+def normalize_base_url(value):
+    trimmed = value.rstrip("/")
+    if trimmed.lower().endswith("/v1"):
+        return trimmed[:-3]
+    return trimmed
 
 
 def post_json(url, api_key, payload, timeout):

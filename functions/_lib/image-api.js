@@ -223,7 +223,8 @@ export function normalizeImageResults(result, requestedFormat) {
 
 function normalizeBaseUrl(value) {
   if (!value) return "";
-  return value.replace(/\/+$/, "");
+  const trimmed = value.replace(/\/+$/, "");
+  return trimmed.replace(/\/v1$/i, "");
 }
 
 function parseTimeoutMs(value) {

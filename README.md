@@ -27,6 +27,8 @@ IMAGE_API_KEY=your-api-key
 IMAGE_MODEL=gpt-image-2
 ```
 
+`IMAGE_API_BASE_URL` can be either `https://api.kkk1eran.top` or `https://api.kkk1eran.top/v1`; the app normalizes both to the correct image endpoint.
+
 Optional variable for slow image generations:
 
 ```env
