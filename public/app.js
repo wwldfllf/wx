@@ -218,29 +218,8 @@ async function generateImage() {
       formData.append("image", state.selectedImage);
     }
 
-    const response = await fetch("/api/generate", {
-      method: "POST",
-      body: formData,
-      signal: controller.signal,
-      headers: { Accept: "application/json" }
-    });
-
-    const body = await readResponseBody(response);
-
-    if (!response.ok) {
-      throw new Error(formatGenerateError(response.status, body.error, body.details));
-    }
-
-    const image = body.images?.[0];
-    if (!image?.src) {
-      throw new Error("接口没有返回可显示的图片。");
-    }
-
-    showResult(image.src, elements.outputFormat.value);
-
-    if (image.revisedPrompt) {
-      showMessage(`模型优化后的提示词：${image.revisedPrompt}`);
-    }
+    const body = await generateWithStream(formData, controller.signal);
+    handleGenerationResult(body);
   } catch (error) {
     const message =
       error.name === "AbortError"
@@ -251,6 +230,103 @@ async function generateImage() {
     window.clearTimeout(timeoutId);
     setLoading(false);
   }
+}
+
+async function generateWithStream(formData, signal) {
+  const response = await fetch("/api/generate-stream", {
+    method: "POST",
+    body: formData,
+    signal,
+    headers: { Accept: "application/x-ndjson" }
+  });
+
+  if (!response.ok || !response.body) {
+    return generateWithJsonFallback(formData, signal);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const event = parseStreamEvent(line);
+      if (!event) continue;
+
+      if (event.type === "progress") {
+        setProgressMessage(event.elapsedMs, event.timeoutMs);
+        continue;
+      }
+
+      if (event.type === "error") {
+        throw new Error(formatGenerateError(event.status || 500, event.error, event.details));
+      }
+
+      if (event.type === "done") {
+        return event.result;
+      }
+    }
+  }
+
+  if (buffer.trim()) {
+    const event = parseStreamEvent(buffer);
+    if (event?.type === "done") return event.result;
+    if (event?.type === "error") {
+      throw new Error(formatGenerateError(event.status || 500, event.error, event.details));
+    }
+  }
+
+  throw new Error("生成连接提前结束，没有收到图片结果。");
+}
+
+async function generateWithJsonFallback(formData, signal) {
+  const response = await fetch("/api/generate", {
+    method: "POST",
+    body: formData,
+    signal,
+    headers: { Accept: "application/json" }
+  });
+  const body = await readResponseBody(response);
+
+  if (!response.ok) {
+    throw new Error(formatGenerateError(response.status, body.error, body.details));
+  }
+
+  return body;
+}
+
+function parseStreamEvent(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
+}
+
+function handleGenerationResult(body) {
+  const image = body.images?.[0];
+  if (!image?.src) {
+    throw new Error("接口没有返回可显示的图片。");
+  }
+
+  showResult(image.src, elements.outputFormat.value);
+
+  if (image.revisedPrompt) {
+    showMessage(`模型优化后的提示词：${image.revisedPrompt}`);
+  }
+}
+
+function setProgressMessage(elapsedMs, timeoutMs) {
+  const elapsed = elapsedMs ? formatDuration(elapsedMs) : "等待中";
+  const limit = timeoutMs ? formatDuration(timeoutMs) : "5 分钟";
+  elements.loadingState.querySelector("p").textContent = `正在生成，已等待 ${elapsed}，最长约 ${limit}`;
 }
 
 function showResult(src, format) {
@@ -266,6 +342,7 @@ function setLoading(isLoading) {
   elements.submitButton.disabled = isLoading;
   elements.loadingState.hidden = !isLoading;
   elements.submitButton.querySelector("span:last-child").textContent = isLoading ? "正在生成" : "生成图片";
+  elements.loadingState.querySelector("p").textContent = "正在生成，请稍候";
 
   if (isLoading) {
     elements.emptyState.hidden = true;
@@ -299,7 +376,7 @@ function formatGenerateError(status, message, details = {}) {
   }
 
   if (status === 504) {
-    return `上游图片接口生成超时。${formatErrorDetails(message, details)}`;
+    return `上游图片接口生成超时。网站已按 5 分钟等待；如果这里显示已等待约 90 秒，说明是 API 网关上游提前返回了 504。${formatErrorDetails(message, details)}`;
   }
 
   return message || `生成失败，HTTP ${status}。`;

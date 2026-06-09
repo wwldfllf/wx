@@ -1,3 +1,5 @@
+export const IMAGE2_MODEL = "gpt-image-2";
+
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 295000;
 
 export const jsonHeaders = {
@@ -19,7 +21,8 @@ export function getConfig(env) {
   return {
     apiBaseUrl: normalizeBaseUrl(env.IMAGE_API_BASE_URL),
     apiKey: env.IMAGE_API_KEY || "",
-    defaultModel: env.IMAGE_MODEL || "gpt-image-2",
+    defaultModel: IMAGE2_MODEL,
+    configuredModel: env.IMAGE_MODEL || "",
     upstreamTimeoutMs: parseTimeoutMs(env.IMAGE_UPSTREAM_TIMEOUT_MS)
   };
 }

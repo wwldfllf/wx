@@ -1,10 +1,8 @@
 import {
   assertConfigured,
   createModelCapabilities,
-  fallbackCapabilities,
-  fetchModels,
   getConfig,
-  isLikelyImageModel,
+  IMAGE2_MODEL,
   json
 } from "../_lib/image-api.js";
 
@@ -13,25 +11,9 @@ export async function onRequestGet({ env }) {
   const configError = assertConfigured(config);
   if (configError) return configError;
 
-  try {
-    const models = await fetchModels(config);
-    const imageModels = models
-      .map((model) => (typeof model === "string" ? model : model?.id))
-      .filter(Boolean)
-      .filter(isLikelyImageModel);
-
-    const uniqueModels = [...new Set(imageModels)];
-    const modelIds = uniqueModels.length ? uniqueModels : [config.defaultModel];
-
-    return json({
-      models: modelIds.map(createModelCapabilities),
-      defaultModel: modelIds.includes(config.defaultModel) ? config.defaultModel : modelIds[0],
-      source: uniqueModels.length ? "models-endpoint" : "fallback"
-    });
-  } catch (error) {
-    return json({
-      ...fallbackCapabilities(config.defaultModel),
-      warning: `Model detection failed, using default options: ${error.message}`
-    });
-  }
+  return json({
+    models: [createModelCapabilities(IMAGE2_MODEL)],
+    defaultModel: IMAGE2_MODEL,
+    source: "image2-docs"
+  });
 }

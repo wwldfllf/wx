@@ -11,7 +11,7 @@ const checks = {
   hasPrompt: home.includes('id="prompt"'),
   hasUpload: home.includes('id="imageInput"'),
   hasResultStage: home.includes('id="resultStage"'),
-  hasVersionedAssets: home.includes("app.js?v=20260609-timeout5m") && home.includes("styles.css?v=20260609-timeout5m"),
+  hasVersionedAssets: home.includes("app.js?v=20260609-stream-image2") && home.includes("styles.css?v=20260609-stream-image2"),
   hasMobileLayout: styles.includes("@media (max-width: 840px)"),
   defaultModel: capabilities.defaultModel,
   models: capabilities.models?.map((model) => model.id) || [],

@@ -24,10 +24,11 @@ Required variables:
 ```env
 IMAGE_API_BASE_URL=https://api.kkk1eran.top
 IMAGE_API_KEY=your-api-key
-IMAGE_MODEL=gpt-image-2
 ```
 
 `IMAGE_API_BASE_URL` can be either `https://api.kkk1eran.top` or `https://api.kkk1eran.top/v1`; the app normalizes both to the correct image endpoint.
+
+Generation is pinned to `gpt-image-2` to match the Python examples in the gateway docs. `IMAGE_MODEL` is ignored by the Cloudflare backend.
 
 Optional variable for slow image generations:
 

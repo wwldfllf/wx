@@ -19,13 +19,8 @@ const upload = multer({
 const PORT = Number(process.env.PORT || 4173);
 const API_BASE_URL = normalizeBaseUrl(process.env.IMAGE_API_BASE_URL);
 const API_KEY = process.env.IMAGE_API_KEY;
-const DEFAULT_MODEL = process.env.IMAGE_MODEL || "gpt-image-2";
-
-const FALLBACK_CAPABILITIES = {
-  models: [createModelCapabilities(DEFAULT_MODEL)],
-  defaultModel: DEFAULT_MODEL,
-  source: "fallback"
-};
+const DEFAULT_MODEL = "gpt-image-2";
+const UPSTREAM_TIMEOUT_MS = parseTimeoutMs(process.env.IMAGE_UPSTREAM_TIMEOUT_MS);
 
 const STATIC_DIR = path.join(__dirname, "public");
 
@@ -37,7 +32,14 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: Boolean(API_BASE_URL && API_KEY),
     configured: Boolean(API_BASE_URL && API_KEY),
-    baseUrl: API_BASE_URL ? maskHost(API_BASE_URL) : null
+    baseUrl: API_BASE_URL ? maskHost(API_BASE_URL) : null,
+    variables: {
+      IMAGE_API_BASE_URL: Boolean(API_BASE_URL),
+      IMAGE_API_KEY: Boolean(API_KEY),
+      IMAGE_MODEL: DEFAULT_MODEL,
+      IMAGE_MODEL_CONFIGURED: process.env.IMAGE_MODEL || null,
+      IMAGE_UPSTREAM_TIMEOUT_MS: UPSTREAM_TIMEOUT_MS
+    }
   });
 });
 
@@ -49,27 +51,11 @@ app.get("/api/capabilities", async (_req, res) => {
     return;
   }
 
-  try {
-    const models = await fetchModels();
-    const imageModels = models
-      .map((model) => (typeof model === "string" ? model : model?.id))
-      .filter(Boolean)
-      .filter(isLikelyImageModel);
-
-    const uniqueModels = [...new Set(imageModels)];
-    const modelIds = uniqueModels.length ? uniqueModels : [DEFAULT_MODEL];
-
-    res.json({
-      models: modelIds.map(createModelCapabilities),
-      defaultModel: modelIds.includes(DEFAULT_MODEL) ? DEFAULT_MODEL : modelIds[0],
-      source: uniqueModels.length ? "models-endpoint" : "fallback"
-    });
-  } catch (error) {
-    res.json({
-      ...FALLBACK_CAPABILITIES,
-      warning: `模型探测失败，已使用默认能力表：${error.message}`
-    });
-  }
+  res.json({
+    models: [createModelCapabilities(DEFAULT_MODEL)],
+    defaultModel: DEFAULT_MODEL,
+    source: "image2-docs"
+  });
 });
 
 app.post("/api/generate", upload.single("image"), async (req, res) => {
@@ -81,7 +67,6 @@ app.post("/api/generate", upload.single("image"), async (req, res) => {
   }
 
   const prompt = String(req.body.prompt || "").trim();
-  const model = String(req.body.model || DEFAULT_MODEL).trim();
   const size = String(req.body.size || "auto").trim();
   const quality = String(req.body.quality || "auto").trim();
   const outputFormat = String(req.body.output_format || "png").trim();
@@ -96,14 +81,14 @@ app.post("/api/generate", upload.single("image"), async (req, res) => {
     const result = hasReferenceImage
       ? await createImageEdit({
           image: req.file,
-          model,
+          model: DEFAULT_MODEL,
           prompt,
           size,
           quality,
           outputFormat
         })
       : await createImage({
-          model,
+          model: DEFAULT_MODEL,
           prompt,
           size,
           quality,
@@ -122,7 +107,7 @@ app.post("/api/generate", upload.single("image"), async (req, res) => {
 
     res.json({
       images,
-      model,
+      model: DEFAULT_MODEL,
       mode: hasReferenceImage ? "image" : "text",
       created: result.created || Date.now()
     });
@@ -161,30 +146,6 @@ function maskHost(value) {
   } catch {
     return "configured";
   }
-}
-
-async function fetchModels() {
-  const response = await apiFetch("/v1/models", {
-    method: "GET"
-  });
-
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw createApiError(response, body, "无法从后端 API 探测模型列表。");
-  }
-
-  return Array.isArray(body.data) ? body.data : [];
-}
-
-function isLikelyImageModel(modelId) {
-  const id = modelId.toLowerCase();
-  return (
-    id.includes("image") ||
-    id.includes("dall") ||
-    id.includes("flux") ||
-    id.includes("sd") ||
-    id.includes("midjourney")
-  );
 }
 
 function createModelCapabilities(id) {
@@ -322,13 +283,40 @@ function compactObject(object) {
 }
 
 async function apiFetch(endpoint, options) {
-  return fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${API_KEY}`,
-      ...(options.headers || {})
+  const controller = new AbortController();
+  const startedAt = Date.now();
+  const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        ...(options.headers || {})
+      }
+    });
+    response.image2Studio = {
+      endpoint,
+      elapsedMs: Date.now() - startedAt,
+      timeoutMs: UPSTREAM_TIMEOUT_MS
+    };
+    return response;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("Upstream image API timed out. Try a lower quality or a smaller image size.");
+      timeoutError.status = 504;
+      timeoutError.details = {
+        endpoint,
+        elapsedMs: Date.now() - startedAt,
+        timeoutMs: UPSTREAM_TIMEOUT_MS
+      };
+      throw timeoutError;
     }
-  });
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function readJson(response) {
@@ -351,8 +339,32 @@ function createApiError(response, body, fallbackMessage) {
 
   const error = new Error(String(message));
   error.status = response.status >= 400 && response.status < 600 ? response.status : 500;
-  error.details = body;
+  error.details = {
+    ...summarizeErrorDetails(body),
+    ...(response.image2Studio || {})
+  };
   return error;
+}
+
+function parseTimeoutMs(value) {
+  const parsed = Number(value || 295000);
+  if (!Number.isFinite(parsed) || parsed < 30000) {
+    return 295000;
+  }
+
+  return Math.min(parsed, 900000);
+}
+
+function summarizeErrorDetails(body) {
+  if (!body) return undefined;
+
+  if (typeof body.text === "string") {
+    return {
+      text: body.text.replace(/\s+/g, " ").trim().slice(0, 240)
+    };
+  }
+
+  return body;
 }
 
 function normalizeImageResults(result, requestedFormat) {
