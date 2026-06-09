@@ -12,6 +12,7 @@ export function onRequestGet({ env }) {
       IMAGE_API_KEY: Boolean(config.apiKey),
       IMAGE_MODEL: config.defaultModel,
       IMAGE_MODEL_CONFIGURED: config.configuredModel || null,
+      IMAGE_UPSTREAM_TIMEOUT_MS_CONFIGURED: config.configuredUpstreamTimeoutMs || null,
       IMAGE_UPSTREAM_TIMEOUT_MS: config.upstreamTimeoutMs
     }
   });

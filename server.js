@@ -38,6 +38,7 @@ app.get("/api/health", (_req, res) => {
       IMAGE_API_KEY: Boolean(API_KEY),
       IMAGE_MODEL: DEFAULT_MODEL,
       IMAGE_MODEL_CONFIGURED: process.env.IMAGE_MODEL || null,
+      IMAGE_UPSTREAM_TIMEOUT_MS_CONFIGURED: process.env.IMAGE_UPSTREAM_TIMEOUT_MS || null,
       IMAGE_UPSTREAM_TIMEOUT_MS: UPSTREAM_TIMEOUT_MS
     }
   });
@@ -348,7 +349,7 @@ function createApiError(response, body, fallbackMessage) {
 
 function parseTimeoutMs(value) {
   const parsed = Number(value || 295000);
-  if (!Number.isFinite(parsed) || parsed < 30000) {
+  if (!Number.isFinite(parsed) || parsed < 295000) {
     return 295000;
   }
 

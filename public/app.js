@@ -376,7 +376,7 @@ function formatGenerateError(status, message, details = {}) {
   }
 
   if (status === 504) {
-    return `上游图片接口生成超时。网站已按 5 分钟等待；如果这里显示已等待约 90 秒，说明是 API 网关上游提前返回了 504。${formatErrorDetails(message, details)}`;
+    return `API 网关提前结束了本次生图请求。网站会等待最多 5 分钟；如果已等待不是 5 分钟，说明是上游服务先返回了 504。${formatErrorDetails(message, details)}`;
   }
 
   return message || `生成失败，HTTP ${status}。`;

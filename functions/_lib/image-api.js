@@ -23,6 +23,7 @@ export function getConfig(env) {
     apiKey: env.IMAGE_API_KEY || "",
     defaultModel: IMAGE2_MODEL,
     configuredModel: env.IMAGE_MODEL || "",
+    configuredUpstreamTimeoutMs: env.IMAGE_UPSTREAM_TIMEOUT_MS || "",
     upstreamTimeoutMs: parseTimeoutMs(env.IMAGE_UPSTREAM_TIMEOUT_MS)
   };
 }
@@ -232,7 +233,7 @@ function normalizeBaseUrl(value) {
 
 function parseTimeoutMs(value) {
   const parsed = Number(value || DEFAULT_UPSTREAM_TIMEOUT_MS);
-  if (!Number.isFinite(parsed) || parsed < 30000) {
+  if (!Number.isFinite(parsed) || parsed < DEFAULT_UPSTREAM_TIMEOUT_MS) {
     return DEFAULT_UPSTREAM_TIMEOUT_MS;
   }
 
