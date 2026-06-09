@@ -56,3 +56,19 @@ IMAGE_API_KEY=sk-your-server-side-key
 IMAGE_MODEL=gpt-image-2
 PORT=4173
 ```
+
+## Local Python Gateway Test
+
+The deployed Cloudflare site cannot run Python directly, so the Pages Function mirrors the same request format as the Python example in the gateway docs.
+
+You can test the gateway locally with:
+
+```bash
+python scripts/image2_gateway.py --prompt "a simple green icon on a white background" --size 1024x1024
+```
+
+For image editing:
+
+```bash
+python scripts/image2_gateway.py --prompt "turn this into a watercolor poster" --size 1024x1024 --image path/to/input.png
+```
