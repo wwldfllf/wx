@@ -228,7 +228,7 @@ async function generateImage() {
     const body = await readResponseBody(response);
 
     if (!response.ok) {
-      throw new Error(formatGenerateError(response.status, body.error));
+      throw new Error(formatGenerateError(response.status, body.error, body.details));
     }
 
     const image = body.images?.[0];
@@ -293,16 +293,33 @@ function hideMessage() {
   elements.messageBox.classList.remove("error");
 }
 
-function formatGenerateError(status, message) {
+function formatGenerateError(status, message, details = {}) {
   if (status === 502) {
-    return `上游图片接口返回 502，通常是 API 网关或模型服务暂时不可用。${message ? `详情：${message}` : ""}`;
+    return `上游图片接口返回 502，通常是 API 网关或模型服务暂时不可用。${formatErrorDetails(message, details)}`;
   }
 
   if (status === 504) {
-    return `上游图片接口生成超时。${message ? `详情：${message}` : ""}`;
+    return `上游图片接口生成超时。${formatErrorDetails(message, details)}`;
   }
 
   return message || `生成失败，HTTP ${status}。`;
+}
+
+function formatErrorDetails(message, details) {
+  const parts = [];
+  if (message) parts.push(`详情：${message}`);
+  if (details?.endpoint) parts.push(`接口：${details.endpoint}`);
+  if (details?.elapsedMs) parts.push(`已等待：${formatDuration(details.elapsedMs)}`);
+  if (details?.timeoutMs) parts.push(`限制：${formatDuration(details.timeoutMs)}`);
+  return parts.length ? parts.join("；") : "";
+}
+
+function formatDuration(ms) {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds} 秒`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest ? `${minutes} 分 ${rest} 秒` : `${minutes} 分钟`;
 }
 
 function setStatus(type, text) {

@@ -1,4 +1,4 @@
-const UPSTREAM_TIMEOUT_MS = 295000;
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 295000;
 
 export const jsonHeaders = {
   "Content-Type": "application/json; charset=utf-8",
@@ -19,7 +19,8 @@ export function getConfig(env) {
   return {
     apiBaseUrl: normalizeBaseUrl(env.IMAGE_API_BASE_URL),
     apiKey: env.IMAGE_API_KEY || "",
-    defaultModel: env.IMAGE_MODEL || "gpt-image-2"
+    defaultModel: env.IMAGE_MODEL || "gpt-image-2",
+    upstreamTimeoutMs: parseTimeoutMs(env.IMAGE_UPSTREAM_TIMEOUT_MS)
   };
 }
 
@@ -225,6 +226,15 @@ function normalizeBaseUrl(value) {
   return value.replace(/\/+$/, "");
 }
 
+function parseTimeoutMs(value) {
+  const parsed = Number(value || DEFAULT_UPSTREAM_TIMEOUT_MS);
+  if (!Number.isFinite(parsed) || parsed < 30000) {
+    return DEFAULT_UPSTREAM_TIMEOUT_MS;
+  }
+
+  return Math.min(parsed, 900000);
+}
+
 function compactObject(object) {
   return Object.fromEntries(
     Object.entries(object).filter(([_key, value]) => value !== undefined && value !== null && value !== "")
@@ -256,10 +266,12 @@ function normalizeGptImage2Size(size) {
 
 async function apiFetch(config, endpoint, options) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  const timeoutMs = config.upstreamTimeoutMs || DEFAULT_UPSTREAM_TIMEOUT_MS;
+  const startedAt = Date.now();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    return await fetch(`${config.apiBaseUrl}${endpoint}`, {
+    const response = await fetch(`${config.apiBaseUrl}${endpoint}`, {
       ...options,
       signal: controller.signal,
       headers: {
@@ -267,10 +279,21 @@ async function apiFetch(config, endpoint, options) {
         ...(options.headers || {})
       }
     });
+    response.image2Studio = {
+      endpoint,
+      elapsedMs: Date.now() - startedAt,
+      timeoutMs
+    };
+    return response;
   } catch (error) {
     if (error.name === "AbortError") {
       const timeoutError = new Error("Upstream image API timed out. Try a lower quality or a smaller image size.");
       timeoutError.status = 504;
+      timeoutError.details = {
+        endpoint,
+        elapsedMs: Date.now() - startedAt,
+        timeoutMs
+      };
       throw timeoutError;
     }
     throw error;
@@ -303,7 +326,10 @@ function createApiError(response, body, fallbackMessage) {
 
   const error = new Error(String(message));
   error.status = response.status >= 400 && response.status < 600 ? response.status : 500;
-  error.details = summarizeErrorDetails(body);
+  error.details = {
+    ...summarizeErrorDetails(body),
+    ...(response.image2Studio || {})
+  };
   return error;
 }
 

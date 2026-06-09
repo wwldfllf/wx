@@ -10,7 +10,8 @@ export function onRequestGet({ env }) {
     variables: {
       IMAGE_API_BASE_URL: Boolean(config.apiBaseUrl),
       IMAGE_API_KEY: Boolean(config.apiKey),
-      IMAGE_MODEL: config.defaultModel
+      IMAGE_MODEL: config.defaultModel,
+      IMAGE_UPSTREAM_TIMEOUT_MS: config.upstreamTimeoutMs
     }
   });
 }

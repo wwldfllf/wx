@@ -27,6 +27,14 @@ IMAGE_API_KEY=your-api-key
 IMAGE_MODEL=gpt-image-2
 ```
 
+Optional variable for slow image generations:
+
+```env
+IMAGE_UPSTREAM_TIMEOUT_MS=295000
+```
+
+The value is in milliseconds. The default is 295000, which is just under 5 minutes. The app accepts values up to 900000.
+
 After adding or editing variables, redeploy the latest Production deployment. Cloudflare does not inject newly-added variables into an already-built deployment.
 
 ## Important
