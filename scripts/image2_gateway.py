@@ -12,13 +12,13 @@ import uuid
 from pathlib import Path
 
 
-DEFAULT_BASE_URL = "https://api.kkk1eran.top"
+DEFAULT_BASE_URL = "https://codeyu.shop"
 DEFAULT_MODEL = "gpt-image-2"
 ALLOWED_SIZES = {"1024x1024", "1536x1024", "1024x1536"}
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Call the kkk1eran GPT Image 2 gateway.")
+    parser = argparse.ArgumentParser(description="Call the configured GPT Image 2 gateway.")
     parser.add_argument("--prompt", required=True, help="Image prompt.")
     parser.add_argument("--size", default="1024x1024", choices=sorted(ALLOWED_SIZES), help="Output size.")
     parser.add_argument("--image", action="append", default=[], help="Reference image path. Repeat for multiple images.")
