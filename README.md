@@ -22,11 +22,11 @@ Settings -> Environment variables -> Production
 Required variables:
 
 ```env
-IMAGE_API_BASE_URL=https://codeyu.shop
+IMAGE_API_BASE_URL=https://api.codeyu.shop
 IMAGE_API_KEY=your-api-key
 ```
 
-`IMAGE_API_BASE_URL` can be either `https://codeyu.shop` or `https://codeyu.shop/v1`; the app normalizes both to the correct image endpoint.
+`IMAGE_API_BASE_URL` can be either `https://api.codeyu.shop` or `https://api.codeyu.shop/v1`; the app normalizes both to the correct image endpoint. Use this direct API subdomain to avoid Cloudflare 524 timeouts on the proxied root domain.
 
 Generation is pinned to `gpt-image-2` to match the Python examples in the gateway docs. `IMAGE_MODEL` is ignored by the Cloudflare backend.
 
@@ -62,7 +62,7 @@ http://localhost:4173
 Local `.env` example:
 
 ```env
-IMAGE_API_BASE_URL=https://codeyu.shop
+IMAGE_API_BASE_URL=https://api.codeyu.shop
 IMAGE_API_KEY=sk-your-server-side-key
 IMAGE_MODEL=gpt-image-2
 PORT=4173

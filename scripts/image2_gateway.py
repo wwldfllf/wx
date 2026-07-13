@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 
 
-DEFAULT_BASE_URL = "https://codeyu.shop"
+DEFAULT_BASE_URL = "https://api.codeyu.shop"
 DEFAULT_MODEL = "gpt-image-2"
 ALLOWED_SIZES = {"1024x1024", "1536x1024", "1024x1536"}
 
