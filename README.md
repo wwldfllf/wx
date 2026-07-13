@@ -30,8 +30,6 @@ IMAGE_API_KEY=your-api-key
 
 Generation is pinned to `gpt-image-2` to match the Python examples in the gateway docs. `IMAGE_MODEL` is ignored by the Cloudflare backend.
 
-When the base URL is `api.codeyu.shop`, Pages Functions automatically use a direct TCP+TLS transport instead of Worker `fetch()`. This keeps the API key server-side while avoiding the approximately 120-second proxy read timeout that causes HTTP 524 during slow image generations.
-
 Optional variable for slow image generations:
 
 ```env

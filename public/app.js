@@ -386,7 +386,6 @@ function formatErrorDetails(message, details) {
   const parts = [];
   if (message) parts.push(`详情：${normalizeErrorMessage(message)}`);
   if (details?.endpoint) parts.push(`接口：${details.endpoint}`);
-  if (details?.transport) parts.push(`通道：${details.transport}`);
   if (details?.elapsedMs) parts.push(`已等待：${formatDuration(details.elapsedMs)}`);
   if (details?.timeoutMs) parts.push(`限制：${formatDuration(details.timeoutMs)}`);
   return parts.length ? parts.join("；") : "";

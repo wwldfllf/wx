@@ -1,9 +1,6 @@
-import { connect } from "cloudflare:sockets";
-
 export const IMAGE2_MODEL = "gpt-image-2";
 
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 300000;
-const MAX_SOCKET_RESPONSE_BYTES = 50 * 1024 * 1024;
 
 export const jsonHeaders = {
   "Content-Type": "application/json; charset=utf-8",
@@ -21,17 +18,13 @@ export function json(data, init = {}) {
 }
 
 export function getConfig(env) {
-  const apiBaseUrl = normalizeBaseUrl(env.IMAGE_API_BASE_URL);
-
   return {
-    apiBaseUrl,
+    apiBaseUrl: normalizeBaseUrl(env.IMAGE_API_BASE_URL),
     apiKey: env.IMAGE_API_KEY || "",
     defaultModel: IMAGE2_MODEL,
     configuredModel: env.IMAGE_MODEL || "",
     configuredUpstreamTimeoutMs: env.IMAGE_UPSTREAM_TIMEOUT_MS || "",
-    upstreamTimeoutMs: parseTimeoutMs(env.IMAGE_UPSTREAM_TIMEOUT_MS),
-    configuredTransport: env.IMAGE_API_TRANSPORT || "",
-    apiTransport: resolveApiTransport(apiBaseUrl, env.IMAGE_API_TRANSPORT)
+    upstreamTimeoutMs: parseTimeoutMs(env.IMAGE_UPSTREAM_TIMEOUT_MS)
   };
 }
 
@@ -238,18 +231,6 @@ function normalizeBaseUrl(value) {
   return trimmed.replace(/\/v1$/i, "");
 }
 
-function resolveApiTransport(apiBaseUrl, configuredTransport) {
-  const configured = String(configuredTransport || "").trim().toLowerCase();
-  if (configured === "socket" || configured === "tcp-socket") return "socket";
-  if (configured === "fetch") return "fetch";
-
-  try {
-    return new URL(apiBaseUrl).hostname === "api.codeyu.shop" ? "socket" : "fetch";
-  } catch {
-    return "fetch";
-  }
-}
-
 function parseTimeoutMs(value) {
   const parsed = Number(value || DEFAULT_UPSTREAM_TIMEOUT_MS);
   if (!Number.isFinite(parsed) || parsed < DEFAULT_UPSTREAM_TIMEOUT_MS) {
@@ -289,33 +270,24 @@ function normalizeGptImage2Size(size) {
 }
 
 async function apiFetch(config, endpoint, options) {
+  const controller = new AbortController();
   const timeoutMs = config.upstreamTimeoutMs || DEFAULT_UPSTREAM_TIMEOUT_MS;
   const startedAt = Date.now();
-  const headers = new Headers(options.headers || {});
-  headers.set("Authorization", `Bearer ${config.apiKey}`);
-  const requestOptions = {
-    ...options,
-    headers
-  };
-
-  if (config.apiTransport === "socket") {
-    return apiSocketFetch(config, endpoint, requestOptions, startedAt, timeoutMs);
-  }
-
-  const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${config.apiBaseUrl}${endpoint}`, {
-      ...requestOptions,
+      ...options,
       signal: controller.signal,
-      headers
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        ...(options.headers || {})
+      }
     });
     response.image2Studio = {
       endpoint,
       elapsedMs: Date.now() - startedAt,
-      timeoutMs,
-      transport: "fetch"
+      timeoutMs
     };
     return response;
   } catch (error) {
@@ -325,8 +297,7 @@ async function apiFetch(config, endpoint, options) {
       timeoutError.details = {
         endpoint,
         elapsedMs: Date.now() - startedAt,
-        timeoutMs,
-        transport: "fetch"
+        timeoutMs
       };
       throw timeoutError;
     }
@@ -334,247 +305,6 @@ async function apiFetch(config, endpoint, options) {
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-async function apiSocketFetch(config, endpoint, options, startedAt, timeoutMs) {
-  const url = new URL(`${config.apiBaseUrl}${endpoint}`);
-  if (url.protocol !== "https:") {
-    throw new Error("TCP socket image transport requires an HTTPS API endpoint.");
-  }
-
-  let socket;
-  let timeoutId;
-  const operation = (async () => {
-    const headers = new Headers(options.headers || {});
-    const body = await serializeSocketBody(options.body, headers);
-    const request = buildHttpRequest(url, options.method || "GET", headers, body);
-
-    socket = connect(
-      {
-        hostname: url.hostname,
-        port: Number(url.port || 443)
-      },
-      {
-        secureTransport: "on",
-        allowHalfOpen: false
-      }
-    );
-
-    await socket.opened;
-    const writer = socket.writable.getWriter();
-    await writer.write(request);
-    await writer.close();
-
-    const responseBytes = await readSocketBytes(socket.readable);
-    return parseHttpResponse(responseBytes);
-  })();
-
-  const timeout = new Promise((_resolve, reject) => {
-    timeoutId = setTimeout(() => {
-      socket?.close().catch(() => {});
-      const error = new Error("网站后端已按 5 分钟等待，但直连图片接口仍未返回结果。");
-      error.name = "SocketTimeoutError";
-      reject(error);
-    }, timeoutMs);
-  });
-
-  try {
-    const response = await Promise.race([operation, timeout]);
-    response.image2Studio = {
-      endpoint,
-      elapsedMs: Date.now() - startedAt,
-      timeoutMs,
-      transport: "tcp-socket"
-    };
-    return response;
-  } catch (error) {
-    if (error.name === "SocketTimeoutError") {
-      error.status = 504;
-      error.details = {
-        endpoint,
-        elapsedMs: Date.now() - startedAt,
-        timeoutMs,
-        transport: "tcp-socket"
-      };
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-    await socket?.close().catch(() => {});
-  }
-}
-
-async function serializeSocketBody(body, headers) {
-  if (body === undefined || body === null) {
-    return new Uint8Array();
-  }
-
-  if (typeof body === "string") {
-    return new TextEncoder().encode(body);
-  }
-
-  if (body instanceof FormData) {
-    const serialized = new Response(body);
-    if (!headers.has("Content-Type")) {
-      headers.set("Content-Type", serialized.headers.get("Content-Type"));
-    }
-    return new Uint8Array(await serialized.arrayBuffer());
-  }
-
-  if (body instanceof Blob) {
-    return new Uint8Array(await body.arrayBuffer());
-  }
-
-  if (body instanceof ArrayBuffer) {
-    return new Uint8Array(body);
-  }
-
-  if (ArrayBuffer.isView(body)) {
-    return new Uint8Array(body.buffer, body.byteOffset, body.byteLength);
-  }
-
-  throw new TypeError("Unsupported request body for TCP socket image transport.");
-}
-
-function buildHttpRequest(url, method, headers, body) {
-  if (!headers.has("Accept")) headers.set("Accept", "application/json");
-  if (!headers.has("User-Agent")) headers.set("User-Agent", "Image2Studio/1.0");
-
-  const path = `${url.pathname || "/"}${url.search}`;
-  const lines = [
-    `${String(method).toUpperCase()} ${path} HTTP/1.1`,
-    `Host: ${url.host}`,
-    "Connection: close",
-    `Content-Length: ${body.byteLength}`
-  ];
-
-  for (const [name, value] of headers.entries()) {
-    const lower = name.toLowerCase();
-    if (lower === "host" || lower === "connection" || lower === "content-length") continue;
-    lines.push(`${name}: ${sanitizeHeaderValue(value)}`);
-  }
-
-  const head = new TextEncoder().encode(`${lines.join("\r\n")}\r\n\r\n`);
-  return concatBytes([head, body]);
-}
-
-async function readSocketBytes(readable) {
-  const reader = readable.getReader();
-  const chunks = [];
-  let total = 0;
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    if (!value?.byteLength) continue;
-
-    total += value.byteLength;
-    if (total > MAX_SOCKET_RESPONSE_BYTES) {
-      throw new Error("Direct image API response exceeded the 50 MB safety limit.");
-    }
-    chunks.push(value);
-  }
-
-  return concatBytes(chunks, total);
-}
-
-function parseHttpResponse(bytes) {
-  const separator = new Uint8Array([13, 10, 13, 10]);
-  const headerEnd = indexOfBytes(bytes, separator);
-  if (headerEnd < 0) {
-    throw new Error("Direct image API returned an invalid HTTP response.");
-  }
-
-  const head = new TextDecoder().decode(bytes.subarray(0, headerEnd));
-  const lines = head.split("\r\n");
-  const statusMatch = lines.shift()?.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})(?:\s+(.*))?$/i);
-  if (!statusMatch) {
-    throw new Error("Direct image API returned an invalid HTTP status line.");
-  }
-
-  const headers = new Headers();
-  for (const line of lines) {
-    const colon = line.indexOf(":");
-    if (colon <= 0) continue;
-    headers.append(line.slice(0, colon).trim(), line.slice(colon + 1).trim());
-  }
-
-  let body = bytes.subarray(headerEnd + separator.byteLength);
-  if (headers.get("Transfer-Encoding")?.toLowerCase().includes("chunked")) {
-    body = decodeChunkedBody(body);
-    headers.delete("Transfer-Encoding");
-    headers.set("Content-Length", String(body.byteLength));
-  } else {
-    const contentLength = Number(headers.get("Content-Length"));
-    if (Number.isFinite(contentLength) && contentLength >= 0 && body.byteLength > contentLength) {
-      body = body.subarray(0, contentLength);
-    }
-  }
-
-  return new Response(body, {
-    status: Number(statusMatch[1]),
-    statusText: statusMatch[2] || "",
-    headers
-  });
-}
-
-function decodeChunkedBody(bytes) {
-  const chunks = [];
-  let total = 0;
-  let offset = 0;
-
-  while (offset < bytes.byteLength) {
-    const lineEnd = indexOfBytes(bytes, new Uint8Array([13, 10]), offset);
-    if (lineEnd < 0) throw new Error("Invalid chunked HTTP response.");
-
-    const sizeText = new TextDecoder()
-      .decode(bytes.subarray(offset, lineEnd))
-      .split(";", 1)[0]
-      .trim();
-    const size = Number.parseInt(sizeText, 16);
-    if (!Number.isFinite(size)) throw new Error("Invalid HTTP chunk size.");
-    if (size === 0) break;
-
-    const start = lineEnd + 2;
-    const end = start + size;
-    if (end > bytes.byteLength) throw new Error("Incomplete chunked HTTP response.");
-
-    chunks.push(bytes.subarray(start, end));
-    total += size;
-    offset = end + 2;
-  }
-
-  return concatBytes(chunks, total);
-}
-
-function concatBytes(chunks, knownTotal) {
-  const total =
-    knownTotal ??
-    chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
-  const result = new Uint8Array(total);
-  let offset = 0;
-
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  return result;
-}
-
-function indexOfBytes(bytes, needle, start = 0) {
-  outer: for (let index = start; index <= bytes.byteLength - needle.byteLength; index += 1) {
-    for (let offset = 0; offset < needle.byteLength; offset += 1) {
-      if (bytes[index + offset] !== needle[offset]) continue outer;
-    }
-    return index;
-  }
-
-  return -1;
-}
-
-function sanitizeHeaderValue(value) {
-  return String(value).replace(/[\r\n]+/g, " ").trim();
 }
 
 async function readJson(response) {
