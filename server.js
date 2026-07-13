@@ -305,7 +305,7 @@ async function apiFetch(endpoint, options) {
     return response;
   } catch (error) {
     if (error.name === "AbortError") {
-      const timeoutError = new Error("网站后端已按 5 分钟等待，但上游图片接口仍未返回结果。");
+      const timeoutError = new Error("网站后端已按 10 分钟等待，但上游图片接口仍未返回结果。");
       timeoutError.status = 504;
       timeoutError.details = {
         endpoint,
@@ -348,9 +348,9 @@ function createApiError(response, body, fallbackMessage) {
 }
 
 function parseTimeoutMs(value) {
-  const parsed = Number(value || 300000);
-  if (!Number.isFinite(parsed) || parsed < 300000) {
-    return 300000;
+  const parsed = Number(value || 600000);
+  if (!Number.isFinite(parsed) || parsed < 600000) {
+    return 600000;
   }
 
   return Math.min(parsed, 900000);

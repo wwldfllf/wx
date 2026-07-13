@@ -25,7 +25,7 @@ def main():
     parser.add_argument("--base-url", default=get_env("IMAGE_API_BASE_URL") or DEFAULT_BASE_URL)
     parser.add_argument("--model", default=get_env("IMAGE_MODEL") or DEFAULT_MODEL)
     parser.add_argument("--out-dir", default="generated")
-    parser.add_argument("--timeout", type=int, default=300)
+    parser.add_argument("--timeout", type=int, default=600)
     args = parser.parse_args()
 
     api_key = get_env("IMAGE_API_KEY") or get_env("API_KEY")
@@ -184,7 +184,7 @@ def save_first_image(result, out_dir, prefix):
 
     if item.get("url"):
         output = out_dir / f"{prefix}-{timestamp}.png"
-        with urllib.request.urlopen(item["url"], timeout=300) as response:
+        with urllib.request.urlopen(item["url"], timeout=600) as response:
             output.write_bytes(response.read())
         return output
 

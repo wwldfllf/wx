@@ -3,129 +3,202 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Image2 Studio</title>
-    <link rel="stylesheet" href="/styles.css?v=20260713-browser-direct" />
+    <meta name="theme-color" content="#f5f5f7" />
+    <meta
+      name="description"
+      content="Image Studio - 使用 GPT Image 2 进行文生图与参考图创作。"
+    />
+    <title>Image Studio</title>
+    <link rel="stylesheet" href="/styles.css?v=20260713-apple-studio" />
   </head>
   <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Image Studio 首页">
+        <span class="brand-mark" aria-hidden="true">
+          <i data-lucide="image"></i>
+        </span>
+        <span>Image Studio</span>
+      </a>
+
+      <div class="status-pill checking" id="statusPill" role="status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="statusText">正在连接 API</span>
+      </div>
+    </header>
+
     <main class="app-shell">
-      <header class="topbar">
+      <section class="page-heading" aria-labelledby="pageTitle">
         <div>
-          <p class="eyebrow">Image2 Studio</p>
-          <h1>AI 图片生成工作台</h1>
+          <p class="eyebrow">GPT IMAGE WORKSPACE</p>
+          <h1 id="pageTitle">把想法变成画面</h1>
         </div>
-        <div class="status-pill" id="statusPill">
-          <span class="status-dot"></span>
-          <span id="statusText">正在连接后端</span>
-        </div>
-      </header>
+        <p class="mode-label" id="modeLabel">文生图</p>
+      </section>
 
       <section class="workspace">
         <form class="control-panel" id="generateForm">
-          <div class="field">
-            <label for="apiKey">API Key</label>
-            <div class="api-key-row">
-              <input
-                id="apiKey"
-                name="api_key"
-                type="password"
-                placeholder="sk-..."
-                autocomplete="off"
-                spellcheck="false"
-                required
-              />
-              <label class="remember-key" for="rememberKey">
-                <input id="rememberKey" type="checkbox" />
-                <span>记住本机</span>
-              </label>
+          <header class="panel-heading">
+            <span class="section-index">01</span>
+            <div>
+              <p class="panel-kicker">创作</p>
+              <h2>描述你的画面</h2>
             </div>
-          </div>
+          </header>
 
-          <div class="field">
-            <label for="prompt">提示词</label>
+          <div class="field prompt-field">
+            <div class="field-label-row">
+              <label for="prompt">画面描述</label>
+              <span id="promptCount">0 / 8000</span>
+            </div>
             <textarea
               id="prompt"
               name="prompt"
               rows="8"
-              placeholder="描述你想生成的画面、风格、主体、光线、构图和细节。"
+              maxlength="8000"
+              placeholder="例如：清晨的玻璃温室，薄雾穿过绿植，电影感光线，细腻真实"
               required
             ></textarea>
           </div>
 
-          <div class="upload-zone" id="uploadZone">
-            <input id="imageInput" name="image" type="file" accept="image/png,image/jpeg,image/webp" />
-            <div class="upload-copy">
-              <strong>参考图</strong>
-              <span>可选，上传后使用图加文生成</span>
+          <div class="reference-block">
+            <div class="field-label-row">
+              <label for="imageInput">参考图</label>
+              <span>PNG、JPEG、WebP</span>
             </div>
-            <button class="icon-button ghost" type="button" id="clearImageButton" title="移除参考图" disabled>
-              <span aria-hidden="true">×</span>
-            </button>
+
+            <label class="upload-zone" id="uploadZone" for="imageInput">
+              <input
+                id="imageInput"
+                name="image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+              />
+              <span class="upload-icon" aria-hidden="true">
+                <i data-lucide="image-plus"></i>
+              </span>
+              <span class="upload-copy">
+                <strong>添加参考图</strong>
+                <span>拖放或选择图片</span>
+              </span>
+            </label>
+
+            <div class="preview-row" id="referencePreview" hidden>
+              <img id="referenceImage" alt="参考图预览" />
+              <div class="preview-copy">
+                <strong id="referenceName">reference.png</strong>
+                <span id="referenceMeta">图加文模式</span>
+              </div>
+              <button
+                class="icon-button"
+                type="button"
+                id="clearImageButton"
+                title="移除参考图"
+                aria-label="移除参考图"
+              >
+                <i data-lucide="x"></i>
+              </button>
+            </div>
           </div>
 
-          <div class="preview-row" id="referencePreview" hidden>
-            <img id="referenceImage" alt="参考图预览" />
-            <div>
-              <strong id="referenceName">reference.png</strong>
-              <span id="referenceMeta">图加文模式</span>
+          <div class="settings-block">
+            <div class="field-label-row">
+              <span class="group-label">生成设置</span>
+              <span id="capabilitySource">等待探测</span>
+            </div>
+
+            <div class="param-grid">
+              <div class="field">
+                <label for="model">模型</label>
+                <select id="model" name="model" aria-label="模型"></select>
+              </div>
+
+              <div class="field">
+                <label for="size">比例</label>
+                <select id="size" name="size" aria-label="图片比例"></select>
+              </div>
+
+              <div class="field">
+                <label for="quality">清晰度</label>
+                <select id="quality" name="quality" aria-label="清晰度"></select>
+              </div>
+
+              <div class="field">
+                <label for="outputFormat">格式</label>
+                <select id="outputFormat" name="output_format" aria-label="输出格式"></select>
+              </div>
             </div>
           </div>
 
-          <div class="param-grid">
-            <div class="field">
-              <label for="model">模型</label>
-              <select id="model" name="model"></select>
-            </div>
-
-            <div class="field">
-              <label for="size">比例</label>
-              <select id="size" name="size"></select>
-            </div>
-
-            <div class="field">
-              <label for="quality">清晰度</label>
-              <select id="quality" name="quality"></select>
-            </div>
-
-            <div class="field">
-              <label for="outputFormat">格式</label>
-              <select id="outputFormat" name="output_format"></select>
-            </div>
-          </div>
-
-          <button class="primary-button" id="submitButton" type="submit">
-            <span class="button-icon" aria-hidden="true">✦</span>
+          <button class="primary-button" id="submitButton" type="submit" disabled>
+            <i data-lucide="sparkles" aria-hidden="true"></i>
             <span>生成图片</span>
           </button>
         </form>
 
         <section class="result-panel" aria-live="polite">
-          <div class="result-header">
-            <div>
-              <p class="eyebrow">Result</p>
-              <h2>生成结果</h2>
+          <header class="result-header">
+            <div class="panel-heading compact">
+              <span class="section-index">02</span>
+              <div>
+                <p class="panel-kicker">预览</p>
+                <h2>生成结果</h2>
+              </div>
             </div>
-            <a class="download-button" id="downloadButton" href="#" download="image2-studio.png" hidden>
-              下载
+
+            <a
+              class="download-button"
+              id="downloadButton"
+              href="#"
+              download="image-studio.png"
+              hidden
+            >
+              <i data-lucide="download" aria-hidden="true"></i>
+              <span>下载原图</span>
             </a>
-          </div>
+          </header>
 
           <div class="result-stage" id="resultStage">
             <div class="empty-state" id="emptyState">
-              <span class="empty-icon" aria-hidden="true">▧</span>
-              <p>图片会显示在这里</p>
+              <span class="empty-icon" aria-hidden="true">
+                <i data-lucide="frame"></i>
+              </span>
+              <div>
+                <strong>等待创作</strong>
+                <p>生成的图片会出现在这里</p>
+              </div>
             </div>
+
             <div class="loading-state" id="loadingState" hidden>
-              <div class="spinner"></div>
-              <p>正在生成，请稍候</p>
+              <div class="motion-mark" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div class="loading-copy">
+                <strong id="loadingTitle">正在理解描述</strong>
+                <p id="loadingMeta">已等待 0 秒</p>
+              </div>
+              <div class="progress-track" aria-hidden="true">
+                <span id="progressBar"></span>
+              </div>
             </div>
+
             <img id="resultImage" alt="生成结果" hidden />
           </div>
 
-          <div class="message-box" id="messageBox" hidden></div>
+          <div class="result-footer" id="resultFooter" hidden>
+            <span id="resultModel">gpt-image-2</span>
+            <span id="resultSize">1024 × 1024</span>
+            <span id="resultDuration">完成</span>
+          </div>
+
+          <div class="message-box" id="messageBox" role="alert" hidden></div>
         </section>
       </section>
     </main>
 
-    <script src="/app.js?v=20260713-browser-direct" type="module"></script>
+    <script src="/vendor/lucide.min.js?v=0.468.0"></script>
+    <script src="/app.js?v=20260713-apple-studio" type="module"></script>
   </body>
 </html>

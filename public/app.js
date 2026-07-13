@@ -1,59 +1,45 @@
-const GENERATE_TIMEOUT_MS = 300000;
-const DIRECT_API_BASE_URL = "https://api.codeyu.shop";
-const API_KEY_STORAGE_KEY = "image2-studio-api-key";
+const GENERATION_TIMEOUT_MS = 630000;
+const DEFAULT_SERVER_TIMEOUT_MS = 600000;
+const CAPABILITY_TIMEOUT_MS = 30000;
+const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
-const state = {
-  capabilities: null,
-  selectedImage: null,
-  lastObjectUrl: null
-};
-
-const elements = {
-  form: document.querySelector("#generateForm"),
-  apiKey: document.querySelector("#apiKey"),
-  rememberKey: document.querySelector("#rememberKey"),
-  prompt: document.querySelector("#prompt"),
-  model: document.querySelector("#model"),
-  size: document.querySelector("#size"),
-  quality: document.querySelector("#quality"),
-  outputFormat: document.querySelector("#outputFormat"),
-  imageInput: document.querySelector("#imageInput"),
-  clearImageButton: document.querySelector("#clearImageButton"),
-  referencePreview: document.querySelector("#referencePreview"),
-  referenceImage: document.querySelector("#referenceImage"),
-  referenceName: document.querySelector("#referenceName"),
-  referenceMeta: document.querySelector("#referenceMeta"),
-  statusPill: document.querySelector("#statusPill"),
-  statusText: document.querySelector("#statusText"),
-  submitButton: document.querySelector("#submitButton"),
-  resultImage: document.querySelector("#resultImage"),
-  emptyState: document.querySelector("#emptyState"),
-  loadingState: document.querySelector("#loadingState"),
-  downloadButton: document.querySelector("#downloadButton"),
-  messageBox: document.querySelector("#messageBox")
+const FALLBACK_CAPABILITIES = {
+  models: [
+    {
+      id: "gpt-image-2",
+      label: "GPT Image 2",
+      sizes: ["1024x1024", "1536x1024", "1024x1536"],
+      qualities: ["gateway-default"],
+      formats: ["png"],
+      modes: ["text", "image"]
+    }
+  ],
+  defaultModel: "gpt-image-2",
+  source: "fallback"
 };
 
 const SIZE_LABELS = {
-  auto: "自动",
-  "1024x1024": "正方形 1:1",
-  "1024x1536": "竖图 2:3",
-  "1536x1024": "横图 3:2",
-  "1536x864": "横图 16:9",
-  "864x1536": "竖图 9:16",
-  "1440x1080": "横图 4:3",
-  "1080x1440": "竖图 3:4",
-  "1536x768": "宽幅 2:1",
-  "768x1536": "长图 1:2",
-  "1024x1792": "竖图 9:16",
-  "1792x1024": "横图 16:9"
+  auto: "自动比例",
+  "1024x1024": "正方形 · 1:1",
+  "1024x1536": "纵向 · 2:3",
+  "1536x1024": "横向 · 3:2",
+  "1536x864": "横向 · 16:9",
+  "864x1536": "纵向 · 9:16",
+  "1440x1080": "横向 · 4:3",
+  "1080x1440": "纵向 · 3:4",
+  "1536x768": "宽幅 · 2:1",
+  "768x1536": "长图 · 1:2",
+  "1024x1792": "纵向 · 9:16",
+  "1792x1024": "横向 · 16:9"
 };
 
 const QUALITY_LABELS = {
   auto: "自动",
-  "gateway-default": "网关默认",
-  low: "低",
-  medium: "中",
-  high: "高",
+  "gateway-default": "智能匹配",
+  low: "快速",
+  medium: "标准",
+  high: "精细",
   standard: "标准",
   hd: "高清"
 };
@@ -64,17 +50,80 @@ const FORMAT_LABELS = {
   webp: "WebP"
 };
 
+const state = {
+  backendReady: false,
+  capabilities: null,
+  selectedImage: null,
+  referenceObjectUrl: null,
+  lastResult: null,
+  generationController: null,
+  generationStartedAt: 0,
+  serverTimeoutMs: DEFAULT_SERVER_TIMEOUT_MS,
+  progressTimer: null
+};
+
+const elements = {
+  form: document.querySelector("#generateForm"),
+  prompt: document.querySelector("#prompt"),
+  promptCount: document.querySelector("#promptCount"),
+  model: document.querySelector("#model"),
+  size: document.querySelector("#size"),
+  quality: document.querySelector("#quality"),
+  outputFormat: document.querySelector("#outputFormat"),
+  imageInput: document.querySelector("#imageInput"),
+  uploadZone: document.querySelector("#uploadZone"),
+  clearImageButton: document.querySelector("#clearImageButton"),
+  referencePreview: document.querySelector("#referencePreview"),
+  referenceImage: document.querySelector("#referenceImage"),
+  referenceName: document.querySelector("#referenceName"),
+  referenceMeta: document.querySelector("#referenceMeta"),
+  modeLabel: document.querySelector("#modeLabel"),
+  capabilitySource: document.querySelector("#capabilitySource"),
+  statusPill: document.querySelector("#statusPill"),
+  statusText: document.querySelector("#statusText"),
+  submitButton: document.querySelector("#submitButton"),
+  resultStage: document.querySelector("#resultStage"),
+  resultImage: document.querySelector("#resultImage"),
+  emptyState: document.querySelector("#emptyState"),
+  loadingState: document.querySelector("#loadingState"),
+  loadingTitle: document.querySelector("#loadingTitle"),
+  loadingMeta: document.querySelector("#loadingMeta"),
+  progressBar: document.querySelector("#progressBar"),
+  downloadButton: document.querySelector("#downloadButton"),
+  resultFooter: document.querySelector("#resultFooter"),
+  resultModel: document.querySelector("#resultModel"),
+  resultSize: document.querySelector("#resultSize"),
+  resultDuration: document.querySelector("#resultDuration"),
+  messageBox: document.querySelector("#messageBox")
+};
+
 init();
 
 async function init() {
-  restoreApiKey();
+  window.lucide?.createIcons?.();
   bindEvents();
+  updatePromptCount();
+  renderCapabilities(FALLBACK_CAPABILITIES);
+  setStageRatio(elements.size.value || "1024x1024");
   await loadCapabilities();
 }
 
 function bindEvents() {
+  elements.prompt.addEventListener("input", updatePromptCount);
+
+  elements.prompt.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      elements.form.requestSubmit();
+    }
+  });
+
   elements.model.addEventListener("change", () => {
     renderParameterOptions(getSelectedModel());
+  });
+
+  elements.size.addEventListener("change", () => {
+    setStageRatio(elements.size.value);
   });
 
   elements.imageInput.addEventListener("change", () => {
@@ -82,18 +131,32 @@ function bindEvents() {
     if (file) setReferenceImage(file);
   });
 
-  elements.clearImageButton.addEventListener("click", () => {
-    clearReferenceImage();
+  elements.clearImageButton.addEventListener("click", clearReferenceImage);
+
+  for (const eventName of ["dragenter", "dragover"]) {
+    elements.uploadZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      elements.uploadZone.classList.add("dragging");
+    });
+  }
+
+  for (const eventName of ["dragleave", "drop"]) {
+    elements.uploadZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      elements.uploadZone.classList.remove("dragging");
+    });
+  }
+
+  elements.uploadZone.addEventListener("drop", (event) => {
+    const file = event.dataTransfer?.files?.[0];
+    if (file) setReferenceImage(file);
   });
 
-  elements.rememberKey.addEventListener("change", () => {
-    if (!elements.rememberKey.checked) {
-      try {
-        localStorage.removeItem(API_KEY_STORAGE_KEY);
-      } catch {
-        // Private browsing modes may disable local storage.
-      }
-    }
+  document.addEventListener("paste", (event) => {
+    const image = Array.from(event.clipboardData?.files || []).find((file) =>
+      ACCEPTED_IMAGE_TYPES.has(file.type)
+    );
+    if (image) setReferenceImage(image);
   });
 
   elements.form.addEventListener("submit", async (event) => {
@@ -103,70 +166,79 @@ function bindEvents() {
 }
 
 async function loadCapabilities() {
-  const capabilities = {
-    models: [
-      {
-        id: "gpt-image-2",
-        label: "gpt-image-2",
-        sizes: ["1024x1024", "1536x1024", "1024x1536"],
-        qualities: ["gateway-default"],
-        formats: ["png"]
-      }
-    ],
-    defaultModel: "gpt-image-2"
-  };
+  setStatus("checking", "正在连接 API");
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), CAPABILITY_TIMEOUT_MS);
 
+  try {
+    const response = await fetch("/api/capabilities", {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+      cache: "no-store"
+    });
+    const body = await readResponseBody(response);
+
+    if (!response.ok) {
+      throw new Error(getApiErrorMessage(body) || `HTTP ${response.status}`);
+    }
+
+    if (!Array.isArray(body.models) || !body.models.length) {
+      throw new Error("后端没有返回可用的图片模型。");
+    }
+
+    state.backendReady = true;
+    renderCapabilities(body);
+    elements.capabilitySource.textContent = "API 实时探测";
+    elements.submitButton.disabled = false;
+    setStatus("ready", "API 已连接");
+  } catch (error) {
+    state.backendReady = false;
+    elements.submitButton.disabled = true;
+    elements.capabilitySource.textContent = "探测失败";
+    setStatus("error", "后端未连接");
+
+    const message =
+      error.name === "AbortError"
+        ? "后端能力探测超过 30 秒，请稍后刷新页面。"
+        : `后端连接失败：${error.message}`;
+    showMessage(message, "error");
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function renderCapabilities(capabilities) {
   state.capabilities = capabilities;
   renderModels(capabilities.models, capabilities.defaultModel);
-  setStatus("ready", "直连 API 已就绪");
-}
-
-function restoreApiKey() {
-  try {
-    const storedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-    if (!storedKey) return;
-    elements.apiKey.value = storedKey;
-    elements.rememberKey.checked = true;
-  } catch {
-    elements.rememberKey.checked = false;
-  }
-}
-
-function persistApiKey(apiKey) {
-  try {
-    if (elements.rememberKey.checked) {
-      localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
-    } else {
-      localStorage.removeItem(API_KEY_STORAGE_KEY);
-    }
-  } catch {
-    elements.rememberKey.checked = false;
-  }
 }
 
 function renderModels(models, defaultModel) {
-  elements.model.innerHTML = "";
+  const previous = elements.model.value;
+  elements.model.replaceChildren();
 
   for (const model of models) {
     const option = document.createElement("option");
     option.value = model.id;
-    option.textContent = model.label || model.id;
-    option.selected = model.id === defaultModel;
+    option.textContent = modelDisplayName(model);
     elements.model.append(option);
   }
 
+  const preferred = models.some((model) => model.id === previous) ? previous : defaultModel;
+  if (preferred) elements.model.value = preferred;
+  elements.model.disabled = models.length <= 1;
   renderParameterOptions(getSelectedModel());
 }
 
 function renderParameterOptions(model) {
-  fillSelect(elements.size, model?.sizes || ["auto"], SIZE_LABELS);
-  fillSelect(elements.quality, model?.qualities || ["auto"], QUALITY_LABELS);
+  fillSelect(elements.size, model?.sizes || ["1024x1024"], SIZE_LABELS);
+  fillSelect(elements.quality, model?.qualities || ["gateway-default"], QUALITY_LABELS);
   fillSelect(elements.outputFormat, model?.formats || ["png"], FORMAT_LABELS);
+  setStageRatio(elements.size.value);
 }
 
 function fillSelect(select, values, labels) {
   const current = select.value;
-  select.innerHTML = "";
+  select.replaceChildren();
 
   for (const value of values) {
     const option = document.createElement("option");
@@ -175,216 +247,300 @@ function fillSelect(select, values, labels) {
     select.append(option);
   }
 
-  if (values.includes(current)) {
-    select.value = current;
-  }
+  if (values.includes(current)) select.value = current;
+  select.disabled = values.length <= 1;
 }
 
 function getSelectedModel() {
   return state.capabilities?.models?.find((model) => model.id === elements.model.value);
 }
 
+function modelDisplayName(model) {
+  if (model.label && model.label !== model.id) return model.label;
+  if (String(model.id).toLowerCase() === "gpt-image-2") return "GPT Image 2";
+  return model.id;
+}
+
+function updatePromptCount() {
+  elements.promptCount.textContent = `${elements.prompt.value.length} / 8000`;
+}
+
 function setReferenceImage(file) {
+  if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+    showMessage("参考图仅支持 PNG、JPEG 或 WebP。", "error");
+    return;
+  }
+
+  if (file.size > MAX_REFERENCE_BYTES) {
+    showMessage("参考图不能超过 20 MB。", "error");
+    return;
+  }
+
   state.selectedImage = file;
+  if (state.referenceObjectUrl) URL.revokeObjectURL(state.referenceObjectUrl);
+  state.referenceObjectUrl = URL.createObjectURL(file);
 
-  if (state.lastObjectUrl) URL.revokeObjectURL(state.lastObjectUrl);
-  state.lastObjectUrl = URL.createObjectURL(file);
-
-  elements.referenceImage.src = state.lastObjectUrl;
-  elements.referenceName.textContent = file.name;
+  elements.referenceImage.src = state.referenceObjectUrl;
+  elements.referenceName.textContent = file.name || "pasted-image.png";
   elements.referenceMeta.textContent = `${formatBytes(file.size)} · 图加文模式`;
   elements.referencePreview.hidden = false;
-  elements.clearImageButton.disabled = false;
+  elements.uploadZone.hidden = true;
+  elements.modeLabel.textContent = "图加文";
+  hideMessage();
 }
 
 function clearReferenceImage() {
   state.selectedImage = null;
   elements.imageInput.value = "";
   elements.referencePreview.hidden = true;
-  elements.clearImageButton.disabled = true;
+  elements.uploadZone.hidden = false;
+  elements.modeLabel.textContent = "文生图";
 
-  if (state.lastObjectUrl) {
-    URL.revokeObjectURL(state.lastObjectUrl);
-    state.lastObjectUrl = null;
+  if (state.referenceObjectUrl) {
+    URL.revokeObjectURL(state.referenceObjectUrl);
+    state.referenceObjectUrl = null;
   }
 }
 
 async function generateImage() {
   const prompt = elements.prompt.value.trim();
-  const apiKey = elements.apiKey.value.trim();
+
+  if (!state.backendReady) {
+    showMessage("后端尚未连接，请刷新页面后重试。", "error");
+    return;
+  }
 
   if (!prompt) {
-    showMessage("请先输入提示词。", "error");
+    showMessage("请先输入画面描述。", "error");
     elements.prompt.focus();
     return;
   }
 
-  if (!apiKey) {
-    showMessage("请先输入 API Key。", "error");
-    elements.apiKey.focus();
-    return;
+  state.generationController?.abort();
+  const controller = new AbortController();
+  state.generationController = controller;
+  state.generationStartedAt = Date.now();
+  state.serverTimeoutMs = DEFAULT_SERVER_TIMEOUT_MS;
+
+  const timeoutId = window.setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
+  const formData = new FormData();
+  formData.append("prompt", prompt);
+  formData.append("model", elements.model.value);
+  formData.append("size", elements.size.value);
+  formData.append("quality", elements.quality.value);
+  formData.append("output_format", elements.outputFormat.value);
+  if (state.selectedImage) {
+    formData.append("image", state.selectedImage, state.selectedImage.name || "reference.png");
   }
 
-  persistApiKey(apiKey);
   setLoading(true);
   hideMessage();
-
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), GENERATE_TIMEOUT_MS);
-  const startedAt = Date.now();
-  const progressId = window.setInterval(() => {
-    setProgressMessage(Date.now() - startedAt, GENERATE_TIMEOUT_MS);
-  }, 1000);
+  startProgressTimer();
 
   try {
-    const body = await generateDirectImage({
-      apiKey,
-      prompt,
-      model: elements.model.value,
-      size: elements.size.value,
-      image: state.selectedImage,
-      signal: controller.signal
-    });
-    handleGenerationResult(body);
+    const result = await generateWithStream(formData, controller.signal);
+    const elapsedMs = Date.now() - state.generationStartedAt;
+    showResult(result, elapsedMs);
+    setStatus("ready", "生成完成");
   } catch (error) {
     const message =
       error.name === "AbortError"
-        ? "生成超过 5 分钟未完成。请降低清晰度、换小比例，或稍后重试。"
-        : error.message;
+        ? "本次生成已等待超过 10 分 30 秒，连接已结束。"
+        : formatGenerateError(error.status, error.message, error.details);
     showMessage(message, "error");
+    setStatus("error", "生成失败");
   } finally {
     window.clearTimeout(timeoutId);
-    window.clearInterval(progressId);
+    stopProgressTimer();
     setLoading(false);
+    state.generationController = null;
   }
 }
 
-async function generateDirectImage({ apiKey, prompt, model, size, image, signal }) {
-  const hasReferenceImage = image instanceof File && image.size > 0;
-  const endpoint = hasReferenceImage ? "/v1/images/edits" : "/v1/images/generations";
-  const headers = {
-    Accept: "application/json",
-    Authorization: `Bearer ${apiKey}`
-  };
-  let requestBody;
-
-  if (hasReferenceImage) {
-    requestBody = new FormData();
-    requestBody.append("model", model);
-    requestBody.append("prompt", prompt);
-    requestBody.append("size", size);
-    requestBody.append("image[]", image, image.name || "reference.png");
-  } else {
-    headers["Content-Type"] = "application/json";
-    requestBody = JSON.stringify({
-      model,
-      prompt,
-      size
-    });
-  }
-
-  const response = await fetch(`${DIRECT_API_BASE_URL}${endpoint}`, {
+async function generateWithStream(formData, signal) {
+  const response = await fetch("/api/generate-stream", {
     method: "POST",
-    body: requestBody,
+    body: formData,
     signal,
-    headers,
-    cache: "no-store",
-    credentials: "omit"
+    headers: { Accept: "application/x-ndjson" },
+    cache: "no-store"
   });
-  const responseBody = await readResponseBody(response);
 
-  if (!response.ok) {
-    throw new Error(
-      formatGenerateError(response.status, getApiErrorMessage(responseBody), {
-        endpoint,
-        transport: "browser-direct"
-      })
-    );
+  if (!response.ok || !response.body) {
+    const body = await readResponseBody(response);
+    throw createRequestError(response.status, getApiErrorMessage(body), body.details);
   }
 
-  const images = normalizeDirectImageResults(responseBody);
-  if (!images.length) {
-    throw new Error("接口没有返回可显示的图片。");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+
+    let newline = buffer.indexOf("\n");
+    while (newline >= 0) {
+      const line = buffer.slice(0, newline).trim();
+      buffer = buffer.slice(newline + 1);
+      if (line) {
+        const result = handleStreamEvent(parseStreamEvent(line));
+        if (result) return result;
+      }
+      newline = buffer.indexOf("\n");
+    }
+
+    if (done) break;
   }
 
-  return {
-    images,
-    model: responseBody.model || model,
-    mode: hasReferenceImage ? "image" : "text",
-    created: responseBody.created || Date.now()
-  };
+  if (buffer.trim()) {
+    const result = handleStreamEvent(parseStreamEvent(buffer.trim()));
+    if (result) return result;
+  }
+
+  throw createRequestError(502, "生成连接已结束，但没有收到图片结果。", {});
 }
 
-function normalizeDirectImageResults(result) {
-  const data = Array.isArray(result?.data) ? result.data : [];
-
-  return data
-    .map((item) => {
-      if (!item) return null;
-      const src = item.b64_json
-        ? `data:image/png;base64,${item.b64_json}`
-        : item.url || "";
-      if (!src) return null;
-
-      return {
-        src,
-        revisedPrompt: item.revised_prompt || ""
-      };
-    })
-    .filter(Boolean);
+function parseStreamEvent(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    throw createRequestError(502, "后端返回了无法解析的生成状态。", {});
+  }
 }
 
-function getApiErrorMessage(body) {
-  if (typeof body?.error === "string") return body.error;
-  return body?.error?.message || body?.message || "图片接口请求失败。";
+function handleStreamEvent(event) {
+  if (event.type === "start") {
+    state.serverTimeoutMs = Number(event.timeoutMs) || DEFAULT_SERVER_TIMEOUT_MS;
+    updateProgress();
+    return null;
+  }
+
+  if (event.type === "progress") {
+    state.serverTimeoutMs = Number(event.timeoutMs) || state.serverTimeoutMs;
+    updateProgress(Number(event.elapsedMs));
+    return null;
+  }
+
+  if (event.type === "done") {
+    return event.result;
+  }
+
+  if (event.type === "error") {
+    throw createRequestError(event.status || 500, event.error, event.details);
+  }
+
+  return null;
 }
 
-function handleGenerationResult(body) {
-  const image = body.images?.[0];
+function createRequestError(status, message, details) {
+  const error = new Error(message || "图片生成失败。");
+  error.status = Number(status) || 500;
+  error.details = details || {};
+  return error;
+}
+
+function startProgressTimer() {
+  stopProgressTimer();
+  updateProgress(0);
+  state.progressTimer = window.setInterval(() => updateProgress(), 1000);
+}
+
+function stopProgressTimer() {
+  if (state.progressTimer) window.clearInterval(state.progressTimer);
+  state.progressTimer = null;
+}
+
+function updateProgress(explicitElapsedMs) {
+  const elapsedMs =
+    explicitElapsedMs ?? Math.max(0, Date.now() - (state.generationStartedAt || Date.now()));
+  const timeoutMs = Math.max(state.serverTimeoutMs, DEFAULT_SERVER_TIMEOUT_MS);
+  const percent = Math.min(96, Math.max(2, (elapsedMs / timeoutMs) * 100));
+
+  elements.progressBar.style.width = `${percent}%`;
+  elements.loadingTitle.textContent = progressPhase(elapsedMs);
+  elements.loadingMeta.textContent = `已等待 ${formatDuration(elapsedMs)} · 最长约 ${formatDuration(timeoutMs)}`;
+}
+
+function progressPhase(elapsedMs) {
+  if (elapsedMs < 15000) return "正在理解描述";
+  if (elapsedMs < 60000) return "正在构建画面";
+  if (elapsedMs < 180000) return "正在绘制细节";
+  return "正在完成高质量渲染";
+}
+
+function showResult(result, elapsedMs) {
+  const image = result?.images?.[0];
   if (!image?.src) {
-    throw new Error("接口没有返回可显示的图片。");
+    throw createRequestError(502, "接口没有返回可显示的图片。", {});
   }
 
-  showResult(image.src, elements.outputFormat.value);
+  state.lastResult = {
+    src: image.src,
+    model: result.model || elements.model.value,
+    size: elements.size.value,
+    format: elements.outputFormat.value,
+    elapsedMs
+  };
 
-  if (image.revisedPrompt) {
-    showMessage(`模型优化后的提示词：${image.revisedPrompt}`);
+  elements.resultImage.classList.remove("reveal");
+  elements.resultImage.onload = () => {
+    requestAnimationFrame(() => elements.resultImage.classList.add("reveal"));
+  };
+  elements.resultImage.src = image.src;
+  if (elements.resultImage.complete) {
+    requestAnimationFrame(() => elements.resultImage.classList.add("reveal"));
   }
-}
-
-function setProgressMessage(elapsedMs, timeoutMs) {
-  const elapsed = elapsedMs ? formatDuration(elapsedMs) : "等待中";
-  const limit = timeoutMs ? formatDuration(timeoutMs) : "5 分钟";
-  elements.loadingState.querySelector("p").textContent = `正在生成，已等待 ${elapsed}，最长约 ${limit}`;
-}
-
-function showResult(src, format) {
-  elements.resultImage.src = src;
   elements.resultImage.hidden = false;
   elements.emptyState.hidden = true;
+  elements.loadingState.hidden = true;
+
+  elements.downloadButton.href = image.src;
+  elements.downloadButton.download = createDownloadName(elements.outputFormat.value);
   elements.downloadButton.hidden = false;
-  elements.downloadButton.href = src;
-  elements.downloadButton.download = `image2-studio-${new Date().toISOString().slice(0, 19).replaceAll(":", "-")}.${extensionFor(format)}`;
+
+  elements.resultModel.textContent = modelDisplayName({ id: state.lastResult.model });
+  elements.resultSize.textContent = state.lastResult.size.replace("x", " × ");
+  elements.resultDuration.textContent = `${formatDuration(elapsedMs)}完成`;
+  elements.resultFooter.hidden = false;
+
+  if (image.revisedPrompt) {
+    showMessage(`优化后的画面描述：${image.revisedPrompt}`);
+  }
 }
 
 function setLoading(isLoading) {
-  elements.submitButton.disabled = isLoading;
+  elements.submitButton.classList.toggle("is-loading", isLoading);
+  elements.submitButton.disabled = isLoading || !state.backendReady;
+  elements.submitButton.querySelector("span").textContent = isLoading ? "正在生成" : "生成图片";
   elements.loadingState.hidden = !isLoading;
-  elements.submitButton.querySelector("span:last-child").textContent = isLoading ? "正在生成" : "生成图片";
-  elements.loadingState.querySelector("p").textContent = "正在生成，请稍候";
 
   if (isLoading) {
-    elements.emptyState.hidden = true;
     elements.resultImage.hidden = true;
+    elements.emptyState.hidden = true;
     elements.downloadButton.hidden = true;
-  } else if (elements.resultImage.src) {
+    elements.resultFooter.hidden = true;
+    setStatus("busy", "正在生成图片");
+    return;
+  }
+
+  if (state.lastResult) {
     elements.resultImage.hidden = false;
     elements.emptyState.hidden = true;
     elements.downloadButton.hidden = false;
+    elements.resultFooter.hidden = false;
   } else {
+    elements.resultImage.hidden = true;
     elements.emptyState.hidden = false;
     elements.downloadButton.hidden = true;
+    elements.resultFooter.hidden = true;
   }
+}
+
+function setStageRatio(size) {
+  const match = String(size || "").match(/^(\d+)x(\d+)$/);
+  const ratio = match ? `${match[1]} / ${match[2]}` : "1 / 1";
+  elements.resultStage.style.setProperty("--result-ratio", ratio);
 }
 
 function showMessage(message, type = "info") {
@@ -399,52 +555,50 @@ function hideMessage() {
   elements.messageBox.classList.remove("error");
 }
 
-function formatGenerateError(status, message, details = {}) {
-  if (status === 502) {
-    return `上游图片接口返回 502，通常是 API 网关或模型服务暂时不可用。${formatErrorDetails(message, details)}`;
-  }
-
-  if (status === 504) {
-    return `API 网关提前结束了本次生图请求。网站会等待最多 5 分钟；如果已等待不是 5 分钟，说明是上游服务先返回了 504。${formatErrorDetails(message, details)}`;
-  }
-
-  return message || `生成失败，HTTP ${status}。`;
+function setStatus(type, text) {
+  elements.statusPill.classList.remove("checking", "ready", "busy", "error");
+  if (type) elements.statusPill.classList.add(type);
+  elements.statusText.textContent = text;
 }
 
-function formatErrorDetails(message, details) {
-  const parts = [];
-  if (message) parts.push(`详情：${normalizeErrorMessage(message)}`);
-  if (details?.endpoint) parts.push(`接口：${details.endpoint}`);
-  if (details?.transport) parts.push(`通道：${details.transport}`);
-  if (details?.elapsedMs) parts.push(`已等待：${formatDuration(details.elapsedMs)}`);
-  if (details?.timeoutMs) parts.push(`限制：${formatDuration(details.timeoutMs)}`);
-  return parts.length ? parts.join("；") : "";
+function formatGenerateError(status, message, details = {}) {
+  const detail = normalizeErrorMessage(message);
+
+  if (status === 401 || status === 403) {
+    return `后端 API Key 无效或没有模型权限。${appendDetail(detail)}`;
+  }
+
+  if (status === 502) {
+    return `上游图片服务暂时不可用（502）。${appendDetail(detail)}`;
+  }
+
+  if (status === 504 || status === 524) {
+    const waited = details.elapsedMs ? `，已等待 ${formatDuration(details.elapsedMs)}` : "";
+    return `上游图片服务超时（${status}${waited}）。${appendDetail(detail)}`;
+  }
+
+  return detail || `图片生成失败（HTTP ${status || 500}）。`;
+}
+
+function appendDetail(detail) {
+  return detail ? ` 详情：${detail}` : "";
 }
 
 function normalizeErrorMessage(message) {
-  if (message === "Upstream image API timed out. Try a lower quality or a smaller image size.") {
-    return "网站后端已按 5 分钟等待，但上游图片接口仍未返回结果。";
-  }
-
-  if (message === "Upstream image API timed out.") {
-    return "上游图片接口返回 504，生成请求被上游提前结束。";
-  }
-
-  return message;
+  const value = String(message || "").trim();
+  const translations = {
+    "Upstream image API timed out. Try a lower quality or a smaller image size.":
+      "后端已按 10 分钟等待，但上游仍未返回结果。",
+    "Upstream image API timed out.": "上游提前结束了生成请求。",
+    "Text-to-image request failed.": "文生图请求未成功。",
+    "Image-plus-text request failed.": "图加文请求未成功。"
+  };
+  return translations[value] || value;
 }
 
-function formatDuration(ms) {
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds} 秒`;
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return rest ? `${minutes} 分 ${rest} 秒` : `${minutes} 分钟`;
-}
-
-function setStatus(type, text) {
-  elements.statusPill.classList.remove("ready", "error");
-  if (type) elements.statusPill.classList.add(type);
-  elements.statusText.textContent = text;
+function getApiErrorMessage(body) {
+  if (typeof body?.error === "string") return body.error;
+  return body?.error?.message || body?.message || "";
 }
 
 async function readResponseBody(response) {
@@ -454,10 +608,16 @@ async function readResponseBody(response) {
   try {
     return JSON.parse(text);
   } catch {
-    return {
-      error: text.slice(0, 300)
-    };
+    return { error: text.slice(0, 500) };
   }
+}
+
+function formatDuration(ms) {
+  const seconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
+  if (seconds < 60) return `${seconds} 秒`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest ? `${minutes} 分 ${rest} 秒` : `${minutes} 分钟`;
 }
 
 function formatBytes(bytes) {
@@ -474,8 +634,8 @@ function formatBytes(bytes) {
   return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
-function extensionFor(format) {
-  if (format === "jpeg") return "jpg";
-  if (format === "webp") return "webp";
-  return "png";
+function createDownloadName(format) {
+  const extension = format === "jpeg" ? "jpg" : format || "png";
+  const timestamp = new Date().toISOString().slice(0, 19).replaceAll(":", "-");
+  return `image-studio-${timestamp}.${extension}`;
 }

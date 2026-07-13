@@ -11,9 +11,13 @@
   "dependencies": {
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "multer": "^2.0.2"
+    "lucide": "0.468.0",
+    "multer": "2.2.0"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "wrangler": "4.110.0"
   }
 }

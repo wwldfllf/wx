@@ -1,7 +1,7 @@
 import { assertConfigured, getConfig } from "../_lib/image-api.js";
 import { generateFromFormData } from "../_lib/generate-handler.js";
 
-const HEARTBEAT_MS = 10000;
+const HEARTBEAT_MS = 8000;
 
 export async function onRequestPost({ request, env }) {
   const config = getConfig(env);
