@@ -138,7 +138,8 @@ label {
 }
 
 textarea,
-select {
+select,
+input[type="password"] {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -163,9 +164,42 @@ select {
 }
 
 textarea:focus,
-select:focus {
+select:focus,
+input[type="password"]:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+input[type="password"] {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.api-key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.remember-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.remember-key input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .upload-zone {
@@ -417,6 +451,11 @@ select:focus {
 }
 
 @media (max-width: 520px) {
+  .api-key-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
   .param-grid {
     grid-template-columns: 1fr;
   }

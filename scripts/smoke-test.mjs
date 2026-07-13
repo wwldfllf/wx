@@ -8,17 +8,18 @@ const [home, styles, capabilities] = await Promise.all([
 
 const checks = {
   hasTitle: home.includes("<title>Image2 Studio</title>"),
+  hasApiKey: home.includes('id="apiKey"'),
   hasPrompt: home.includes('id="prompt"'),
   hasUpload: home.includes('id="imageInput"'),
   hasResultStage: home.includes('id="resultStage"'),
-  hasVersionedAssets: home.includes("app.js?v=20260609-cachebust-5min") && home.includes("styles.css?v=20260609-cachebust-5min"),
+  hasVersionedAssets: home.includes("app.js?v=20260713-browser-direct") && home.includes("styles.css?v=20260713-browser-direct"),
   hasMobileLayout: styles.includes("@media (max-width: 840px)"),
   defaultModel: capabilities.defaultModel,
   models: capabilities.models?.map((model) => model.id) || [],
   image2Sizes: capabilities.models?.find((model) => model.id === "gpt-image-2")?.sizes || []
 };
 
-if (!checks.hasTitle || !checks.hasPrompt || !checks.hasUpload || !checks.hasResultStage) {
+if (!checks.hasTitle || !checks.hasApiKey || !checks.hasPrompt || !checks.hasUpload || !checks.hasResultStage) {
   throw new Error("首页缺少关键 UI 节点。");
 }
 

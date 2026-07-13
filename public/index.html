@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Image2 Studio</title>
-    <link rel="stylesheet" href="/styles.css?v=20260609-cachebust-5min" />
+    <link rel="stylesheet" href="/styles.css?v=20260713-browser-direct" />
   </head>
   <body>
     <main class="app-shell">
@@ -21,6 +21,25 @@
 
       <section class="workspace">
         <form class="control-panel" id="generateForm">
+          <div class="field">
+            <label for="apiKey">API Key</label>
+            <div class="api-key-row">
+              <input
+                id="apiKey"
+                name="api_key"
+                type="password"
+                placeholder="sk-..."
+                autocomplete="off"
+                spellcheck="false"
+                required
+              />
+              <label class="remember-key" for="rememberKey">
+                <input id="rememberKey" type="checkbox" />
+                <span>记住本机</span>
+              </label>
+            </div>
+          </div>
+
           <div class="field">
             <label for="prompt">提示词</label>
             <textarea
@@ -107,6 +126,6 @@
       </section>
     </main>
 
-    <script src="/app.js?v=20260609-cachebust-5min" type="module"></script>
+    <script src="/app.js?v=20260713-browser-direct" type="module"></script>
   </body>
 </html>

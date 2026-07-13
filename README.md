@@ -13,36 +13,19 @@ Build output directory: public
 Root directory: /
 ```
 
-Add these variables in Cloudflare Pages:
+The production UI uses browser-direct mode:
 
-```text
-Settings -> Environment variables -> Production
-```
+- Generation requests go from the browser directly to `https://api.codeyu.shop`.
+- The user enters an API key in the page. It is never committed to GitHub or returned by Cloudflare.
+- "Remember on this device" stores the key only in that browser's local storage.
+- Text-to-image and image editing use the gateway's documented `gpt-image-2` request shapes.
+- The browser aborts requests after 300000 ms.
 
-Required variables:
-
-```env
-IMAGE_API_BASE_URL=https://api.codeyu.shop
-IMAGE_API_KEY=your-api-key
-```
-
-`IMAGE_API_BASE_URL` can be either `https://api.codeyu.shop` or `https://api.codeyu.shop/v1`; the app normalizes both to the correct image endpoint. Use this direct API subdomain to avoid Cloudflare 524 timeouts on the proxied root domain.
-
-Generation is pinned to `gpt-image-2` to match the Python examples in the gateway docs. `IMAGE_MODEL` is ignored by the Cloudflare backend.
-
-Optional variable for slow image generations:
-
-```env
-IMAGE_UPSTREAM_TIMEOUT_MS=300000
-```
-
-The value is in milliseconds. The default is 300000, which is 5 minutes. The app treats smaller values as 300000 and accepts larger values up to 900000.
-
-After adding or editing variables, redeploy the latest Production deployment. Cloudflare does not inject newly-added variables into an already-built deployment.
+This removes Cloudflare Pages Functions from the long-running generation path. Cloudflare's approximately 120-second proxy read timeout can no longer produce HTTP 524 for image generation.
 
 ## Important
 
-Do not commit your real API key to GitHub. Put it only in Cloudflare Pages environment variables.
+Do not commit your real API key to GitHub. Enter it in the website when generating an image. Leave "Remember on this device" unchecked on shared devices.
 
 ## Local Node Debug
 
@@ -70,7 +53,7 @@ PORT=4173
 
 ## Local Python Gateway Test
 
-The deployed Cloudflare site cannot run Python directly, so the Pages Function mirrors the same request format as the Python example in the gateway docs.
+The deployed Cloudflare site cannot run Python directly. The browser and this local Python script use the same request format.
 
 You can test the gateway locally with:
 

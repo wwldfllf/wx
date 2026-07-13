@@ -1,4 +1,6 @@
 const GENERATE_TIMEOUT_MS = 300000;
+const DIRECT_API_BASE_URL = "https://api.codeyu.shop";
+const API_KEY_STORAGE_KEY = "image2-studio-api-key";
 
 const state = {
   capabilities: null,
@@ -8,6 +10,8 @@ const state = {
 
 const elements = {
   form: document.querySelector("#generateForm"),
+  apiKey: document.querySelector("#apiKey"),
+  rememberKey: document.querySelector("#rememberKey"),
   prompt: document.querySelector("#prompt"),
   model: document.querySelector("#model"),
   size: document.querySelector("#size"),
@@ -63,6 +67,7 @@ const FORMAT_LABELS = {
 init();
 
 async function init() {
+  restoreApiKey();
   bindEvents();
   await loadCapabilities();
 }
@@ -81,6 +86,16 @@ function bindEvents() {
     clearReferenceImage();
   });
 
+  elements.rememberKey.addEventListener("change", () => {
+    if (!elements.rememberKey.checked) {
+      try {
+        localStorage.removeItem(API_KEY_STORAGE_KEY);
+      } catch {
+        // Private browsing modes may disable local storage.
+      }
+    }
+  });
+
   elements.form.addEventListener("submit", async (event) => {
     event.preventDefault();
     await generateImage();
@@ -88,41 +103,44 @@ function bindEvents() {
 }
 
 async function loadCapabilities() {
+  const capabilities = {
+    models: [
+      {
+        id: "gpt-image-2",
+        label: "gpt-image-2",
+        sizes: ["1024x1024", "1536x1024", "1024x1536"],
+        qualities: ["gateway-default"],
+        formats: ["png"]
+      }
+    ],
+    defaultModel: "gpt-image-2"
+  };
+
+  state.capabilities = capabilities;
+  renderModels(capabilities.models, capabilities.defaultModel);
+  setStatus("ready", "直连 API 已就绪");
+}
+
+function restoreApiKey() {
   try {
-    const response = await fetch("/api/capabilities", {
-      headers: { Accept: "application/json" }
-    });
-    const body = await readResponseBody(response);
+    const storedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+    if (!storedKey) return;
+    elements.apiKey.value = storedKey;
+    elements.rememberKey.checked = true;
+  } catch {
+    elements.rememberKey.checked = false;
+  }
+}
 
-    if (!response.ok) {
-      throw new Error(body.error || "后端能力探测失败。");
+function persistApiKey(apiKey) {
+  try {
+    if (elements.rememberKey.checked) {
+      localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
+    } else {
+      localStorage.removeItem(API_KEY_STORAGE_KEY);
     }
-
-    state.capabilities = body;
-    renderModels(body.models || [], body.defaultModel);
-    setStatus("ready", body.source === "models-endpoint" ? "后端已连接，模型已探测" : "后端已连接，使用默认参数");
-
-    if (body.warning) {
-      showMessage(body.warning);
-    }
-  } catch (error) {
-    const fallback = {
-      models: [
-        {
-          id: "gpt-image-2",
-          label: "gpt-image-2",
-          sizes: ["1024x1024", "1536x1024", "1024x1536"],
-          qualities: ["gateway-default"],
-          formats: ["png"]
-        }
-      ],
-      defaultModel: "gpt-image-2"
-    };
-
-    state.capabilities = fallback;
-    renderModels(fallback.models, fallback.defaultModel);
-    setStatus("error", "后端探测失败");
-    showMessage(error.message, "error");
+  } catch {
+    elements.rememberKey.checked = false;
   }
 }
 
@@ -193,6 +211,7 @@ function clearReferenceImage() {
 
 async function generateImage() {
   const prompt = elements.prompt.value.trim();
+  const apiKey = elements.apiKey.value.trim();
 
   if (!prompt) {
     showMessage("请先输入提示词。", "error");
@@ -200,25 +219,32 @@ async function generateImage() {
     return;
   }
 
+  if (!apiKey) {
+    showMessage("请先输入 API Key。", "error");
+    elements.apiKey.focus();
+    return;
+  }
+
+  persistApiKey(apiKey);
   setLoading(true);
   hideMessage();
 
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), GENERATE_TIMEOUT_MS);
+  const startedAt = Date.now();
+  const progressId = window.setInterval(() => {
+    setProgressMessage(Date.now() - startedAt, GENERATE_TIMEOUT_MS);
+  }, 1000);
 
   try {
-    const formData = new FormData();
-    formData.append("prompt", prompt);
-    formData.append("model", elements.model.value);
-    formData.append("size", elements.size.value);
-    formData.append("quality", elements.quality.value);
-    formData.append("output_format", elements.outputFormat.value);
-
-    if (state.selectedImage) {
-      formData.append("image", state.selectedImage);
-    }
-
-    const body = await generateWithStream(formData, controller.signal);
+    const body = await generateDirectImage({
+      apiKey,
+      prompt,
+      model: elements.model.value,
+      size: elements.size.value,
+      image: state.selectedImage,
+      signal: controller.signal
+    });
     handleGenerationResult(body);
   } catch (error) {
     const message =
@@ -228,86 +254,89 @@ async function generateImage() {
     showMessage(message, "error");
   } finally {
     window.clearTimeout(timeoutId);
+    window.clearInterval(progressId);
     setLoading(false);
   }
 }
 
-async function generateWithStream(formData, signal) {
-  const response = await fetch("/api/generate-stream", {
+async function generateDirectImage({ apiKey, prompt, model, size, image, signal }) {
+  const hasReferenceImage = image instanceof File && image.size > 0;
+  const endpoint = hasReferenceImage ? "/v1/images/edits" : "/v1/images/generations";
+  const headers = {
+    Accept: "application/json",
+    Authorization: `Bearer ${apiKey}`
+  };
+  let requestBody;
+
+  if (hasReferenceImage) {
+    requestBody = new FormData();
+    requestBody.append("model", model);
+    requestBody.append("prompt", prompt);
+    requestBody.append("size", size);
+    requestBody.append("image[]", image, image.name || "reference.png");
+  } else {
+    headers["Content-Type"] = "application/json";
+    requestBody = JSON.stringify({
+      model,
+      prompt,
+      size
+    });
+  }
+
+  const response = await fetch(`${DIRECT_API_BASE_URL}${endpoint}`, {
     method: "POST",
-    body: formData,
+    body: requestBody,
     signal,
-    headers: { Accept: "application/x-ndjson" }
+    headers,
+    cache: "no-store",
+    credentials: "omit"
   });
-
-  if (!response.ok || !response.body) {
-    return generateWithJsonFallback(formData, signal);
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      const event = parseStreamEvent(line);
-      if (!event) continue;
-
-      if (event.type === "progress") {
-        setProgressMessage(event.elapsedMs, event.timeoutMs);
-        continue;
-      }
-
-      if (event.type === "error") {
-        throw new Error(formatGenerateError(event.status || 500, event.error, event.details));
-      }
-
-      if (event.type === "done") {
-        return event.result;
-      }
-    }
-  }
-
-  if (buffer.trim()) {
-    const event = parseStreamEvent(buffer);
-    if (event?.type === "done") return event.result;
-    if (event?.type === "error") {
-      throw new Error(formatGenerateError(event.status || 500, event.error, event.details));
-    }
-  }
-
-  throw new Error("生成连接提前结束，没有收到图片结果。");
-}
-
-async function generateWithJsonFallback(formData, signal) {
-  const response = await fetch("/api/generate", {
-    method: "POST",
-    body: formData,
-    signal,
-    headers: { Accept: "application/json" }
-  });
-  const body = await readResponseBody(response);
+  const responseBody = await readResponseBody(response);
 
   if (!response.ok) {
-    throw new Error(formatGenerateError(response.status, body.error, body.details));
+    throw new Error(
+      formatGenerateError(response.status, getApiErrorMessage(responseBody), {
+        endpoint,
+        transport: "browser-direct"
+      })
+    );
   }
 
-  return body;
+  const images = normalizeDirectImageResults(responseBody);
+  if (!images.length) {
+    throw new Error("接口没有返回可显示的图片。");
+  }
+
+  return {
+    images,
+    model: responseBody.model || model,
+    mode: hasReferenceImage ? "image" : "text",
+    created: responseBody.created || Date.now()
+  };
 }
 
-function parseStreamEvent(line) {
-  try {
-    return JSON.parse(line);
-  } catch {
-    return null;
-  }
+function normalizeDirectImageResults(result) {
+  const data = Array.isArray(result?.data) ? result.data : [];
+
+  return data
+    .map((item) => {
+      if (!item) return null;
+      const src = item.b64_json
+        ? `data:image/png;base64,${item.b64_json}`
+        : item.url || "";
+      if (!src) return null;
+
+      return {
+        src,
+        revisedPrompt: item.revised_prompt || ""
+      };
+    })
+    .filter(Boolean);
+}
+
+function getApiErrorMessage(body) {
+  if (typeof body?.error === "string") return body.error;
+  return body?.error?.message || body?.message || "图片接口请求失败。";
 }
 
 function handleGenerationResult(body) {
@@ -386,6 +415,7 @@ function formatErrorDetails(message, details) {
   const parts = [];
   if (message) parts.push(`详情：${normalizeErrorMessage(message)}`);
   if (details?.endpoint) parts.push(`接口：${details.endpoint}`);
+  if (details?.transport) parts.push(`通道：${details.transport}`);
   if (details?.elapsedMs) parts.push(`已等待：${formatDuration(details.elapsedMs)}`);
   if (details?.timeoutMs) parts.push(`限制：${formatDuration(details.timeoutMs)}`);
   return parts.length ? parts.join("；") : "";
