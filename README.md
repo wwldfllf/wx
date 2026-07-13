@@ -2,9 +2,12 @@
 
 Image Studio is a Cloudflare Pages image-generation workspace for `gpt-image-2`. It supports text-to-image, reference-image editing, API-detected size options, result preview, and original-image download.
 
+The first screen is an interactive Three.js welcome scene. Selecting "开始创作" transitions into the image workspace without a page reload, and the workspace brand returns to the welcome scene.
+
 ## Architecture
 
 - The browser only calls `/api/capabilities` and `/api/generate-stream`.
+- Three.js and Lucide are vendored under `public/vendor/`, so the interface has no runtime CDN dependency.
 - The upstream API key stays in Cloudflare Pages Secrets and is never sent to the browser.
 - The generation function sends an NDJSON heartbeat every 8 seconds so the browser receives visible progress.
 - Requests to `api.codeyu.shop` use Cloudflare's outbound TLS socket transport instead of the normal Worker `fetch()` path.

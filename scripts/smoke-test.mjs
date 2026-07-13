@@ -1,22 +1,32 @@
 const baseUrl = process.env.SMOKE_BASE_URL || "http://localhost:4173";
 
-const [home, styles, app, capabilities] = await Promise.all([
+const [home, styles, app, welcomeScene, three, capabilities] = await Promise.all([
   readText(`${baseUrl}/`),
   readText(`${baseUrl}/styles.css`),
   readText(`${baseUrl}/app.js`),
+  readText(`${baseUrl}/welcome-scene.js`),
+  readText(`${baseUrl}/vendor/three.module.min.js`),
   readJson(`${baseUrl}/api/capabilities`)
 ]);
 
 const checks = {
   hasTitle: home.includes("<title>Image Studio</title>"),
+  hasWelcomeScene:
+    home.includes('id="welcomeExperience"') &&
+    home.includes('id="welcomeCanvas"') &&
+    home.includes('id="startStudioButton"'),
+  hasStudioScene: home.includes('id="studioExperience"'),
   hasNoApiKeyInput: !home.includes('id="apiKey"') && !home.includes('name="api_key"'),
   hasPrompt: home.includes('id="prompt"'),
   hasUpload: home.includes('id="imageInput"'),
   hasResultStage: home.includes('id="resultStage"'),
   hasVersionedAssets:
-    home.includes("app.js?v=20260713-apple-studio") &&
-    home.includes("styles.css?v=20260713-apple-studio"),
+    home.includes("app.js?v=20260713-welcome-scene") &&
+    home.includes("styles.css?v=20260713-welcome-scene") &&
+    home.includes("welcome-scene.js?v=20260713-welcome-scene"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
+  usesLocalThree:
+    welcomeScene.includes('from "/vendor/three.module.min.js"') && three.includes("WebGLRenderer"),
   usesBackendStream: app.includes('fetch("/api/generate-stream"'),
   hasNoPublicUpstream: !app.includes("api.codeyu.shop") && !app.includes("Authorization"),
   defaultModel: capabilities.defaultModel,
@@ -26,6 +36,8 @@ const checks = {
 
 if (
   !checks.hasTitle ||
+  !checks.hasWelcomeScene ||
+  !checks.hasStudioScene ||
   !checks.hasNoApiKeyInput ||
   !checks.hasPrompt ||
   !checks.hasUpload ||
@@ -40,6 +52,10 @@ if (!checks.hasVersionedAssets) {
 
 if (!checks.hasMobileLayout) {
   throw new Error("样式缺少移动端布局。");
+}
+
+if (!checks.usesLocalThree) {
+  throw new Error("欢迎页没有使用站内 Three.js 主视觉。");
 }
 
 if (!checks.usesBackendStream || !checks.hasNoPublicUpstream) {

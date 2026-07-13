@@ -3,6 +3,8 @@ const DEFAULT_SERVER_TIMEOUT_MS = 600000;
 const CAPABILITY_TIMEOUT_MS = 30000;
 const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const ENTER_TRANSITION_MS = 960;
+const RETURN_TRANSITION_MS = 840;
 
 const FALLBACK_CAPABILITIES = {
   models: [
@@ -59,10 +61,17 @@ const state = {
   generationController: null,
   generationStartedAt: 0,
   serverTimeoutMs: DEFAULT_SERVER_TIMEOUT_MS,
-  progressTimer: null
+  progressTimer: null,
+  sceneTransitioning: false
 };
 
 const elements = {
+  welcomeExperience: document.querySelector("#welcomeExperience"),
+  welcomeHero: document.querySelector("#welcomeHero"),
+  startStudioButton: document.querySelector("#startStudioButton"),
+  studioExperience: document.querySelector("#studioExperience"),
+  studioBrand: document.querySelector("#studioBrand"),
+  pageTitle: document.querySelector("#pageTitle"),
   form: document.querySelector("#generateForm"),
   prompt: document.querySelector("#prompt"),
   promptCount: document.querySelector("#promptCount"),
@@ -101,6 +110,7 @@ init();
 
 async function init() {
   window.lucide?.createIcons?.();
+  initializeExperience();
   bindEvents();
   updatePromptCount();
   renderCapabilities(FALLBACK_CAPABILITIES);
@@ -109,6 +119,21 @@ async function init() {
 }
 
 function bindEvents() {
+  elements.startStudioButton.addEventListener("click", () => enterStudio(true));
+
+  elements.studioBrand.addEventListener("click", (event) => {
+    event.preventDefault();
+    returnToWelcome(true);
+  });
+
+  document.querySelector(".welcome-brand")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  });
+
+  window.addEventListener("popstate", syncExperienceToLocation);
+  window.addEventListener("hashchange", syncExperienceToLocation);
+
   elements.prompt.addEventListener("input", updatePromptCount);
 
   elements.prompt.addEventListener("keydown", (event) => {
@@ -163,6 +188,104 @@ function bindEvents() {
     event.preventDefault();
     await generateImage();
   });
+}
+
+function initializeExperience() {
+  if (window.location.hash === "#studio") {
+    showStudioImmediately();
+    return;
+  }
+
+  showWelcomeImmediately();
+}
+
+function showWelcomeImmediately() {
+  document.body.classList.remove("studio-active", "scene-transitioning", "scene-returning");
+  document.body.classList.add("welcome-active");
+  elements.welcomeExperience.hidden = false;
+  elements.welcomeExperience.setAttribute("aria-hidden", "false");
+  elements.welcomeExperience.inert = false;
+  elements.studioExperience.setAttribute("aria-hidden", "true");
+  elements.studioExperience.inert = true;
+  window.dispatchEvent(new CustomEvent("studio:welcome"));
+}
+
+function showStudioImmediately() {
+  document.body.classList.remove("welcome-active", "scene-transitioning", "scene-returning");
+  document.body.classList.add("studio-active");
+  elements.welcomeExperience.hidden = true;
+  elements.welcomeExperience.setAttribute("aria-hidden", "true");
+  elements.welcomeExperience.inert = true;
+  elements.studioExperience.setAttribute("aria-hidden", "false");
+  elements.studioExperience.inert = false;
+  window.dispatchEvent(new CustomEvent("studio:entered"));
+}
+
+function enterStudio(updateHistory) {
+  if (state.sceneTransitioning || document.body.classList.contains("studio-active")) return;
+
+  state.sceneTransitioning = true;
+  elements.studioExperience.setAttribute("aria-hidden", "false");
+  elements.studioExperience.inert = false;
+  elements.welcomeExperience.setAttribute("aria-hidden", "true");
+  document.body.classList.add("scene-transitioning");
+  window.dispatchEvent(new CustomEvent("studio:enter"));
+
+  if (updateHistory && window.location.hash !== "#studio") {
+    window.history.pushState({ view: "studio" }, "", "#studio");
+  }
+
+  window.setTimeout(() => {
+    document.body.classList.remove("welcome-active", "scene-transitioning");
+    document.body.classList.add("studio-active");
+    elements.welcomeExperience.hidden = true;
+    elements.welcomeExperience.inert = true;
+    window.scrollTo(0, 0);
+    elements.studioBrand.focus({ preventScroll: true });
+    state.sceneTransitioning = false;
+    window.dispatchEvent(new CustomEvent("studio:entered"));
+  }, transitionDuration(ENTER_TRANSITION_MS));
+}
+
+function returnToWelcome(updateHistory) {
+  if (state.sceneTransitioning || !document.body.classList.contains("studio-active")) return;
+
+  state.sceneTransitioning = true;
+  elements.welcomeExperience.hidden = false;
+  elements.welcomeExperience.inert = false;
+  elements.welcomeExperience.setAttribute("aria-hidden", "false");
+  elements.studioExperience.setAttribute("aria-hidden", "true");
+  elements.studioExperience.inert = true;
+  document.body.classList.add("scene-returning");
+  window.dispatchEvent(new CustomEvent("studio:welcome"));
+
+  if (updateHistory && window.location.hash !== "#welcome") {
+    window.history.pushState({ view: "welcome" }, "", "#welcome");
+  }
+
+  window.setTimeout(() => {
+    document.body.classList.remove("studio-active", "scene-returning");
+    document.body.classList.add("welcome-active");
+    window.scrollTo(0, 0);
+    elements.startStudioButton.focus({ preventScroll: true });
+    state.sceneTransitioning = false;
+  }, transitionDuration(RETURN_TRANSITION_MS));
+}
+
+function syncExperienceToLocation() {
+  if (window.location.hash === "#studio") {
+    enterStudio(false);
+  } else {
+    returnToWelcome(false);
+  }
+}
+
+function transitionDuration(duration) {
+  return prefersReducedMotion() ? 20 : duration;
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 async function loadCapabilities() {

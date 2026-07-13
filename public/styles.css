@@ -46,6 +46,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+body.welcome-active,
+body.scene-transitioning,
+body.scene-returning {
+  overflow-x: hidden;
+}
+
 ::selection {
   background: #b9dcff;
   color: var(--text);
@@ -75,6 +81,285 @@ svg {
 
 [hidden] {
   display: none !important;
+}
+
+.welcome-experience {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  background: #eff1f4;
+}
+
+.welcome-hero {
+  position: relative;
+  display: grid;
+  height: 88svh;
+  min-height: 680px;
+  overflow: hidden;
+  background: #eff1f4;
+  isolation: isolate;
+}
+
+#welcomeCanvas {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  transition:
+    transform 1s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 1s ease;
+}
+
+.scene-fallback #welcomeCanvas {
+  display: none;
+}
+
+.welcome-nav {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 66px;
+  padding: 10px max(28px, calc((100vw - 1340px) / 2));
+}
+
+.welcome-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #151517;
+  font-size: 0.94rem;
+  font-weight: 660;
+  text-decoration: none;
+}
+
+.welcome-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 7px;
+  background: #151517;
+  color: #ffffff;
+}
+
+.welcome-brand-mark svg {
+  width: 17px;
+  height: 17px;
+}
+
+.welcome-model {
+  color: rgba(29, 29, 31, 0.62);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.welcome-copy {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: max(7vw, calc((100vw - 1240px) / 2));
+  width: min(540px, 43vw);
+  transform: translateY(-40%);
+}
+
+.welcome-kicker {
+  margin: 0;
+  color: rgba(29, 29, 31, 0.58);
+  font-size: 0.7rem;
+  font-weight: 720;
+  letter-spacing: 0;
+}
+
+.welcome-copy h1 {
+  margin: 10px 0 0;
+  color: #111113;
+  font-size: 4.5rem;
+  font-weight: 690;
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+.welcome-statement {
+  max-width: 440px;
+  margin: 22px 0 0;
+  color: rgba(29, 29, 31, 0.78);
+  font-size: 1.3rem;
+  font-weight: 520;
+  line-height: 1.5;
+}
+
+.welcome-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  margin-top: 34px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 8px;
+  background: #111113;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.welcome-cta:hover {
+  background: #2d2d31;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.19);
+  transform: translateY(-2px);
+}
+
+.welcome-cta:active {
+  transform: scale(0.985);
+}
+
+.welcome-cta svg {
+  transition: transform 180ms ease;
+}
+
+.welcome-cta:hover svg {
+  transform: translateX(3px);
+}
+
+.welcome-signature {
+  position: absolute;
+  z-index: 3;
+  right: max(28px, calc((100vw - 1340px) / 2));
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: rgba(29, 29, 31, 0.46);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.welcome-signature span:not(:last-child)::after {
+  margin-left: 18px;
+  color: rgba(29, 29, 31, 0.22);
+  content: "/";
+}
+
+.welcome-teaser {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  min-height: 210px;
+  padding: 38px max(28px, calc((100vw - 1240px) / 2));
+  border-top: 1px solid rgba(29, 29, 31, 0.09);
+  background: #ffffff;
+}
+
+.welcome-teaser h2 {
+  margin: 8px 0 0;
+  color: #1d1d1f;
+  font-size: 1.75rem;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.teaser-meta {
+  margin: 0;
+  color: #747478;
+  font-size: 0.78rem;
+  font-weight: 580;
+}
+
+.studio-experience {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  background: var(--page);
+}
+
+body.welcome-active:not(.scene-transitioning) .studio-experience {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.scene-transitioning {
+  overflow: hidden;
+}
+
+body.scene-transitioning .welcome-experience {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  height: 100svh;
+  overflow: hidden;
+  pointer-events: none;
+  animation: welcome-curtain 920ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+body.scene-transitioning #welcomeCanvas {
+  filter: saturate(1.12) brightness(1.04);
+  transform: scale(1.08);
+}
+
+body.scene-transitioning .welcome-copy > *,
+body.scene-transitioning .welcome-nav,
+body.scene-transitioning .welcome-signature {
+  animation: welcome-copy-out 520ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+body.scene-transitioning .welcome-copy h1 {
+  animation-delay: 40ms;
+}
+
+body.scene-transitioning .welcome-statement {
+  animation-delay: 75ms;
+}
+
+body.scene-transitioning .welcome-cta {
+  animation-delay: 110ms;
+}
+
+body.scene-transitioning .studio-experience {
+  position: fixed;
+  z-index: 2;
+  inset: 0;
+  overflow-y: auto;
+  visibility: visible;
+  opacity: 1;
+  animation: studio-arrive 920ms 100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+body.scene-returning {
+  overflow: hidden;
+}
+
+body.scene-returning .welcome-experience {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  height: 100svh;
+  overflow: hidden;
+  animation: welcome-return 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+body.scene-returning .studio-experience {
+  animation: studio-recede 700ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
 .topbar {
@@ -723,6 +1008,63 @@ select:focus {
   color: #9f2d29;
 }
 
+@keyframes welcome-curtain {
+  0% {
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+@keyframes welcome-copy-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes studio-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(34px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes welcome-return {
+  from {
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+    transform: scale(1.025);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes studio-recede {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(24px) scale(0.99);
+  }
+}
+
 @keyframes enter-up {
   from {
     opacity: 0;
@@ -802,6 +1144,19 @@ select:focus {
 }
 
 @media (max-width: 900px) {
+  .welcome-copy {
+    left: 6vw;
+    width: 52vw;
+  }
+
+  .welcome-copy h1 {
+    font-size: 3.65rem;
+  }
+
+  .welcome-statement {
+    font-size: 1.12rem;
+  }
+
   .app-shell {
     width: min(720px, calc(100% - 28px));
     padding-top: 30px;
@@ -821,7 +1176,77 @@ select:focus {
   }
 }
 
+@media (max-width: 700px) {
+  .welcome-hero {
+    height: 88svh;
+    min-height: 620px;
+  }
+
+  .welcome-nav {
+    min-height: 58px;
+    padding-inline: 18px;
+  }
+
+  .welcome-copy {
+    top: 118px;
+    left: 22px;
+    width: calc(100% - 44px);
+    transform: none;
+  }
+
+  .welcome-copy h1 {
+    margin-top: 8px;
+    font-size: 3rem;
+  }
+
+  .welcome-statement {
+    max-width: 310px;
+    margin-top: 16px;
+    font-size: 1rem;
+  }
+
+  .welcome-cta {
+    min-height: 44px;
+    margin-top: 24px;
+    padding-inline: 17px;
+  }
+
+  .welcome-signature {
+    right: 18px;
+    bottom: 18px;
+    gap: 10px;
+  }
+
+  .welcome-signature span:not(:last-child)::after {
+    margin-left: 10px;
+  }
+
+  .welcome-teaser {
+    align-items: start;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 190px;
+    padding: 30px 22px;
+  }
+
+  .welcome-teaser h2 {
+    font-size: 1.45rem;
+  }
+}
+
 @media (max-width: 560px) {
+  .welcome-brand > span:last-child {
+    font-size: 0.86rem;
+  }
+
+  .welcome-model {
+    font-size: 0.66rem;
+  }
+
+  .welcome-copy h1 {
+    font-size: 2.72rem;
+  }
+
   .topbar {
     min-height: 54px;
     padding-inline: 12px;
@@ -896,6 +1321,18 @@ select:focus {
 }
 
 @media (max-width: 380px) {
+  .welcome-copy {
+    top: 106px;
+  }
+
+  .welcome-copy h1 {
+    font-size: 2.38rem;
+  }
+
+  .welcome-statement {
+    font-size: 0.94rem;
+  }
+
   .param-grid {
     grid-template-columns: 1fr;
   }
