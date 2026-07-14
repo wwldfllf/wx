@@ -69,6 +69,14 @@ const elements = {
   welcomeExperience: document.querySelector("#welcomeExperience"),
   welcomeHero: document.querySelector("#welcomeHero"),
   startStudioButton: document.querySelector("#startStudioButton"),
+  welcomeGetStarted: document.querySelector("#welcomeGetStarted"),
+  welcomeQuickForm: document.querySelector("#welcomeQuickForm"),
+  welcomePrompt: document.querySelector("#welcomePrompt"),
+  welcomeImageInput: document.querySelector("#welcomeImageInput"),
+  welcomeAddImage: document.querySelector("#welcomeAddImage"),
+  welcomePickImage: document.querySelector("#welcomePickImage"),
+  welcomeSettings: document.querySelector("#welcomeSettings"),
+  welcomeFileName: document.querySelector("#welcomeFileName"),
   studioExperience: document.querySelector("#studioExperience"),
   studioBrand: document.querySelector("#studioBrand"),
   pageTitle: document.querySelector("#pageTitle"),
@@ -120,6 +128,27 @@ async function init() {
 
 function bindEvents() {
   elements.startStudioButton.addEventListener("click", () => enterStudio(true));
+  elements.welcomeGetStarted.addEventListener("click", () => enterStudio(true));
+
+  elements.welcomeQuickForm.addEventListener("submit", handleWelcomeGenerate);
+  elements.welcomeAddImage.addEventListener("click", () => elements.welcomeImageInput.click());
+  elements.welcomePickImage.addEventListener("click", () => elements.welcomeImageInput.click());
+  elements.welcomeSettings.addEventListener("click", () => {
+    enterStudio(true);
+    window.setTimeout(
+      () => elements.size.focus({ preventScroll: true }),
+      transitionDuration(ENTER_TRANSITION_MS) + 40
+    );
+  });
+
+  elements.welcomeImageInput.addEventListener("change", () => {
+    const file = elements.welcomeImageInput.files?.[0];
+    if (file) setReferenceImage(file);
+  });
+
+  document.querySelectorAll("[data-welcome-action]").forEach((button) => {
+    button.addEventListener("click", () => handleWelcomeNavAction(button.dataset.welcomeAction));
+  });
 
   elements.studioBrand.addEventListener("click", (event) => {
     event.preventDefault();
@@ -188,6 +217,50 @@ function bindEvents() {
     event.preventDefault();
     await generateImage();
   });
+}
+
+function handleWelcomeNavAction(action) {
+  if (action === "explore") {
+    elements.welcomePrompt.focus({ preventScroll: true });
+    elements.welcomeQuickForm.classList.add("attention");
+    window.setTimeout(() => elements.welcomeQuickForm.classList.remove("attention"), 700);
+    return;
+  }
+
+  if (action === "about") {
+    document.querySelector(".welcome-benefits")?.scrollIntoView({
+      block: "end",
+      behavior: prefersReducedMotion() ? "auto" : "smooth"
+    });
+    return;
+  }
+
+  enterStudio(true);
+}
+
+function handleWelcomeGenerate(event) {
+  event.preventDefault();
+  const prompt = elements.welcomePrompt.value.trim();
+
+  if (!prompt) {
+    elements.welcomePrompt.focus();
+    elements.welcomeQuickForm.classList.remove("invalid");
+    void elements.welcomeQuickForm.offsetWidth;
+    elements.welcomeQuickForm.classList.add("invalid");
+    return;
+  }
+
+  elements.prompt.value = prompt;
+  updatePromptCount();
+  enterStudio(true);
+
+  window.setTimeout(() => {
+    if (state.backendReady) {
+      elements.form.requestSubmit();
+    } else {
+      showMessage("后端仍在连接，连接完成后请再次点击生成。", "error");
+    }
+  }, transitionDuration(ENTER_TRANSITION_MS) + 80);
 }
 
 function initializeExperience() {
@@ -409,6 +482,9 @@ function setReferenceImage(file) {
   elements.referencePreview.hidden = false;
   elements.uploadZone.hidden = true;
   elements.modeLabel.textContent = "图加文";
+  elements.welcomeFileName.textContent = file.name || "reference.png";
+  elements.welcomeFileName.hidden = false;
+  elements.welcomePrompt.placeholder = "Reference image ready — describe your edit...";
   hideMessage();
 }
 
@@ -418,6 +494,10 @@ function clearReferenceImage() {
   elements.referencePreview.hidden = true;
   elements.uploadZone.hidden = false;
   elements.modeLabel.textContent = "文生图";
+  elements.welcomeImageInput.value = "";
+  elements.welcomeFileName.hidden = true;
+  elements.welcomeFileName.textContent = "";
+  elements.welcomePrompt.placeholder = "Describe what you want to create...";
 
   if (state.referenceObjectUrl) {
     URL.revokeObjectURL(state.referenceObjectUrl);
