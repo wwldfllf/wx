@@ -1353,6 +1353,123 @@ select:focus {
   }
 }
 
+/* Typography alignment */
+body {
+  font-family:
+    "PingFang SC",
+    "Microsoft YaHei UI",
+    "Microsoft YaHei",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    sans-serif;
+  line-height: 1.5;
+  font-synthesis: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+.welcome-brand,
+.brand {
+  line-height: 1.2;
+}
+
+.welcome-nav-links button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.welcome-copy h1 {
+  line-height: 1.08;
+}
+
+.welcome-copy h1 span,
+.page-heading h1 span {
+  display: inline-block;
+  line-height: inherit;
+  vertical-align: baseline;
+}
+
+.welcome-statement {
+  line-height: 1.55;
+}
+
+.welcome-cta,
+.content-cta,
+.primary-button,
+.download-button {
+  line-height: 1;
+}
+
+.welcome-benefits div {
+  line-height: 1.2;
+}
+
+.welcome-page-heading p {
+  line-height: 1.4;
+}
+
+.welcome-page-heading h1 {
+  line-height: 1.18;
+}
+
+.welcome-page-heading > span {
+  line-height: 1.65;
+}
+
+.inspiration-item > span {
+  align-content: center;
+}
+
+.inspiration-item strong {
+  line-height: 1.35;
+}
+
+.inspiration-item small {
+  line-height: 1.45;
+}
+
+.gallery-item > span {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  line-height: 1.25;
+}
+
+.plan-item h2,
+.about-copy h2,
+.panel-heading h2 {
+  line-height: 1.35;
+}
+
+.plan-item strong,
+.about-copy dt,
+.about-copy dd {
+  line-height: 1.45;
+}
+
+.about-copy dl div {
+  align-content: start;
+}
+
+.page-heading h1 {
+  line-height: 1.18;
+}
+
+.field-label-row,
+.mode-label,
+.status-pill,
+.section-index {
+  line-height: 1.2;
+}
+
 /* Imagine reference: Apple-style liquid glass */
 :root {
   --page: #f7f8ff;

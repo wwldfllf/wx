@@ -230,7 +230,7 @@ function bindEvents() {
 function showWelcomePage(pageName, updateHistory) {
   const page = WELCOME_PAGES.has(pageName) ? pageName : "home";
   state.welcomePage = page;
-  document.body.dataset.welcomePage = page;
+  document.body.dataset.welcomeView = page;
 
   elements.welcomePages.forEach((section) => {
     const active = section.dataset.page === page;

@@ -34,8 +34,8 @@ const checks = {
   hasUpload: home.includes('id="imageInput"'),
   hasResultStage: home.includes('id="resultStage"'),
   hasVersionedAssets:
-    home.includes("app.js?v=20260714-welcome-pages") &&
-    home.includes("styles.css?v=20260714-welcome-pages") &&
+    home.includes("app.js?v=20260714-pages-align") &&
+    home.includes("styles.css?v=20260714-pages-align") &&
     !home.includes("welcome-scene.js"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
   usesBackendStream: app.includes('fetch("/api/generate-stream"'),
