@@ -6,10 +6,10 @@
     <meta name="theme-color" content="#f5f5f7" />
     <meta
       name="description"
-      content="Image Studio - 使用 GPT Image 2 进行文生图与参考图创作。"
+      content="灵感画室 - 使用 GPT Image 2 进行文生图与参考图创作。"
     />
-    <title>Image Studio</title>
-    <link rel="stylesheet" href="/styles.css?v=20260714-imagine" />
+    <title>灵感画室</title>
+    <link rel="stylesheet" href="/styles.css?v=20260714-zh-welcome" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -17,104 +17,54 @@
         <canvas id="welcomeCanvas" aria-hidden="true"></canvas>
 
         <nav class="welcome-nav" aria-label="欢迎页导航">
-          <a class="welcome-brand" href="#welcome" aria-label="Image Studio">
+          <a class="welcome-brand" href="#welcome" aria-label="灵感画室">
             <span class="welcome-brand-mark" aria-hidden="true">
               <i data-lucide="circle"></i>
             </span>
-            <span>Image Studio</span>
+            <span>灵感画室</span>
           </a>
 
           <div class="welcome-nav-links" aria-label="主要页面">
-            <a class="active" href="#welcome">Home</a>
-            <button type="button" data-welcome-action="explore">Explore</button>
-            <button type="button" data-welcome-action="gallery">Gallery</button>
-            <button type="button" data-welcome-action="pricing">Pricing</button>
-            <button type="button" data-welcome-action="about">About</button>
+            <a class="active" href="#welcome">首页</a>
+            <button type="button" data-welcome-action="explore">探索</button>
+            <button type="button" data-welcome-action="gallery">作品</button>
+            <button type="button" data-welcome-action="pricing">方案</button>
+            <button type="button" data-welcome-action="about">关于</button>
           </div>
 
           <button class="welcome-get-started" id="welcomeGetStarted" type="button">
-            Get Started
+            开始创作
           </button>
         </nav>
 
         <div class="welcome-copy">
           <h1 id="welcomeTitle">
-            Create anything<br />
-            you can <span>imagine</span>
+            让每一种想象<br />
+            都成为 <span>画面</span>
           </h1>
           <p class="welcome-statement">
-            Image Studio is your AI-powered creative companion.<br />
-            Turn ideas into stunning visuals in seconds.
+            灵感画室是你的智能创意伙伴。<br />
+            几秒钟内，让每一个想法清晰呈现。
           </p>
-          <button class="welcome-cta" id="startStudioButton" type="button">
-            <span>Start Creating</span>
-            <i data-lucide="arrow-right" aria-hidden="true"></i>
-          </button>
         </div>
 
-        <form class="welcome-quick-form" id="welcomeQuickForm">
-          <input
-            id="welcomeImageInput"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-          />
-          <button
-            class="welcome-tool-button"
-            id="welcomeAddImage"
-            type="button"
-            title="添加参考图"
-            aria-label="添加参考图"
-          >
-            <i data-lucide="plus"></i>
-          </button>
-          <input
-            class="welcome-prompt"
-            id="welcomePrompt"
-            type="text"
-            maxlength="8000"
-            placeholder="Describe what you want to create..."
-            aria-label="快速输入画面描述"
-          />
-          <span class="welcome-file-name" id="welcomeFileName" hidden></span>
-          <div class="welcome-quick-actions">
-            <button
-              class="welcome-tool-button"
-              id="welcomeSettings"
-              type="button"
-              title="生成设置"
-              aria-label="打开生成设置"
-            >
-              <i data-lucide="sliders-horizontal"></i>
-            </button>
-            <button
-              class="welcome-tool-button welcome-image-button"
-              id="welcomePickImage"
-              type="button"
-              title="选择参考图"
-              aria-label="选择参考图"
-            >
-              <i data-lucide="image"></i>
-            </button>
-            <button class="welcome-generate" type="submit">
-              <span>Generate</span>
-              <i data-lucide="sparkles" aria-hidden="true"></i>
-            </button>
-          </div>
-        </form>
+        <button class="welcome-cta" id="startStudioButton" type="button">
+          <span>开始创作</span>
+          <i data-lucide="arrow-right" aria-hidden="true"></i>
+        </button>
 
         <div class="welcome-benefits" aria-label="服务特点">
           <div>
             <i data-lucide="sparkles" aria-hidden="true"></i>
-            <span>Powered by advanced AI</span>
+            <span>智能创作引擎</span>
           </div>
           <div>
             <i data-lucide="image" aria-hidden="true"></i>
-            <span>High-resolution outputs</span>
+            <span>高清图片输出</span>
           </div>
           <div>
             <i data-lucide="lock-keyhole" aria-hidden="true"></i>
-            <span>Privacy focused</span>
+            <span>隐私安全保障</span>
           </div>
         </div>
       </section>
@@ -122,23 +72,23 @@
 
     <div class="studio-experience" id="studioExperience" aria-hidden="true" inert>
       <header class="topbar">
-        <a class="brand" id="studioBrand" href="#welcome" aria-label="返回 Image Studio 欢迎页">
+        <a class="brand" id="studioBrand" href="#welcome" aria-label="返回灵感画室欢迎页">
           <span class="brand-mark" aria-hidden="true">
             <i data-lucide="circle"></i>
           </span>
-          <span>Image Studio</span>
+          <span>灵感画室</span>
         </a>
 
         <div class="status-pill checking" id="statusPill" role="status">
           <span class="status-dot" aria-hidden="true"></span>
-          <span id="statusText">正在连接 API</span>
+          <span id="statusText">正在连接服务</span>
         </div>
       </header>
 
       <main class="app-shell">
         <section class="page-heading" aria-labelledby="pageTitle">
           <div>
-            <p class="eyebrow">GPT IMAGE WORKSPACE</p>
+            <p class="eyebrow">图像创作工作台</p>
             <h1 id="pageTitle">把想法变成 <span>画面</span></h1>
           </div>
           <p class="mode-label" id="modeLabel">文生图</p>
@@ -309,7 +259,7 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/welcome-scene.js?v=20260714-imagine" type="module"></script>
-    <script src="/app.js?v=20260714-imagine" type="module"></script>
+    <script src="/welcome-scene.js?v=20260714-zh-welcome" type="module"></script>
+    <script src="/app.js?v=20260714-zh-welcome" type="module"></script>
   </body>
 </html>

@@ -10,22 +10,27 @@ const [home, styles, app, welcomeScene, three, capabilities] = await Promise.all
 ]);
 
 const checks = {
-  hasTitle: home.includes("<title>Image Studio</title>"),
+  hasTitle: home.includes("<title>灵感画室</title>"),
   hasWelcomeScene:
     home.includes('id="welcomeExperience"') &&
     home.includes('id="welcomeCanvas"') &&
     home.includes('id="startStudioButton"') &&
-    home.includes('id="welcomeQuickForm"') &&
     home.includes('id="welcomeGetStarted"'),
+  hasNoWelcomeDialog:
+    !home.includes('id="welcomeQuickForm"') && !home.includes('id="welcomePrompt"'),
+  hasChineseWelcome:
+    home.includes("让每一种想象") &&
+    home.includes("开始创作") &&
+    home.includes("智能创作引擎"),
   hasStudioScene: home.includes('id="studioExperience"'),
   hasNoApiKeyInput: !home.includes('id="apiKey"') && !home.includes('name="api_key"'),
   hasPrompt: home.includes('id="prompt"'),
   hasUpload: home.includes('id="imageInput"'),
   hasResultStage: home.includes('id="resultStage"'),
   hasVersionedAssets:
-    home.includes("app.js?v=20260714-imagine") &&
-    home.includes("styles.css?v=20260714-imagine") &&
-    home.includes("welcome-scene.js?v=20260714-imagine"),
+    home.includes("app.js?v=20260714-zh-welcome") &&
+    home.includes("styles.css?v=20260714-zh-welcome") &&
+    home.includes("welcome-scene.js?v=20260714-zh-welcome"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
   usesLocalThree:
     welcomeScene.includes('from "/vendor/three.module.min.js"') && three.includes("WebGLRenderer"),
@@ -39,6 +44,8 @@ const checks = {
 if (
   !checks.hasTitle ||
   !checks.hasWelcomeScene ||
+  !checks.hasNoWelcomeDialog ||
+  !checks.hasChineseWelcome ||
   !checks.hasStudioScene ||
   !checks.hasNoApiKeyInput ||
   !checks.hasPrompt ||
