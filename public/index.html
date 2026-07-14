@@ -9,15 +9,13 @@
       content="灵感画室 - 使用 GPT Image 2 进行文生图与参考图创作。"
     />
     <title>灵感画室</title>
-    <link rel="stylesheet" href="/styles.css?v=20260714-zh-welcome" />
+    <link rel="stylesheet" href="/styles.css?v=20260714-welcome-pages" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
-      <section class="welcome-hero" id="welcomeHero" aria-labelledby="welcomeTitle">
-        <canvas id="welcomeCanvas" aria-hidden="true"></canvas>
-
+      <section class="welcome-hero" id="welcomeHero">
         <nav class="welcome-nav" aria-label="欢迎页导航">
-          <a class="welcome-brand" href="#welcome" aria-label="灵感画室">
+          <a class="welcome-brand" href="#home" aria-label="返回灵感画室首页">
             <span class="welcome-brand-mark" aria-hidden="true">
               <i data-lucide="circle"></i>
             </span>
@@ -25,49 +23,238 @@
           </a>
 
           <div class="welcome-nav-links" aria-label="主要页面">
-            <a class="active" href="#welcome">首页</a>
-            <button type="button" data-welcome-action="explore">探索</button>
-            <button type="button" data-welcome-action="gallery">作品</button>
-            <button type="button" data-welcome-action="pricing">方案</button>
-            <button type="button" data-welcome-action="about">关于</button>
+            <button class="active" type="button" data-welcome-page="home">首页</button>
+            <button type="button" data-welcome-page="explore">探索</button>
+            <button type="button" data-welcome-page="gallery">作品</button>
+            <button type="button" data-welcome-page="pricing">方案</button>
+            <button type="button" data-welcome-page="about">关于</button>
           </div>
-
-          <button class="welcome-get-started" id="welcomeGetStarted" type="button">
-            开始创作
-          </button>
         </nav>
 
-        <div class="welcome-copy">
-          <h1 id="welcomeTitle">
-            让每一种想象<br />
-            都成为 <span>画面</span>
-          </h1>
-          <p class="welcome-statement">
-            灵感画室是你的智能创意伙伴。<br />
-            几秒钟内，让每一个想法清晰呈现。
-          </p>
-        </div>
+        <div class="welcome-pages">
+          <section
+            class="welcome-page welcome-home-page active"
+            id="welcomePageHome"
+            data-page="home"
+            aria-labelledby="welcomeTitle"
+          >
+            <div class="welcome-copy">
+              <h1 id="welcomeTitle">
+                让每一种想象<br />
+                都成为 <span>画面</span>
+              </h1>
+              <p class="welcome-statement">
+                灵感画室是你的智能创意伙伴。<br />
+                几秒钟内，让每一个想法清晰呈现。
+              </p>
+            </div>
 
-        <button class="welcome-cta" id="startStudioButton" type="button">
-          <span>开始创作</span>
-          <i data-lucide="arrow-right" aria-hidden="true"></i>
-        </button>
+            <img
+              class="welcome-reference-art"
+              src="/assets/reference-dream-gallery.jpg"
+              alt="玻璃画廊环绕梦境星球与雪山湖面的创意场景"
+            />
 
-        <div class="welcome-benefits" aria-label="服务特点">
-          <div>
-            <i data-lucide="sparkles" aria-hidden="true"></i>
-            <span>智能创作引擎</span>
-          </div>
-          <div>
-            <i data-lucide="image" aria-hidden="true"></i>
-            <span>高清图片输出</span>
-          </div>
-          <div>
-            <i data-lucide="lock-keyhole" aria-hidden="true"></i>
-            <span>隐私安全保障</span>
-          </div>
+            <button class="welcome-cta" id="startStudioButton" type="button">
+              <span>开始创作</span>
+              <i data-lucide="arrow-right" aria-hidden="true"></i>
+            </button>
+
+            <div class="welcome-benefits" aria-label="服务特点">
+              <div>
+                <i data-lucide="sparkles" aria-hidden="true"></i>
+                <span>智能创作引擎</span>
+              </div>
+              <div>
+                <i data-lucide="image" aria-hidden="true"></i>
+                <span>高清图片输出</span>
+              </div>
+              <div>
+                <i data-lucide="lock-keyhole" aria-hidden="true"></i>
+                <span>隐私安全保障</span>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="welcome-page welcome-content-page"
+            id="welcomePageExplore"
+            data-page="explore"
+            aria-labelledby="exploreTitle"
+            aria-hidden="true"
+            inert
+          >
+            <div class="welcome-page-shell">
+              <header class="welcome-page-heading">
+                <p>灵感探索</p>
+                <h1 id="exploreTitle">从一个画面开始</h1>
+                <span>选择灵感方向，提示词会自动带入创作工作区。</span>
+              </header>
+              <div class="inspiration-grid">
+                <button
+                  class="inspiration-item"
+                  type="button"
+                  data-prompt-preset="清晨的玻璃宫殿漂浮在云海上，柔和日光，通透材质，电影级构图，细腻真实"
+                >
+                  <img src="/assets/work-cloud-window.jpg" alt="云海玻璃宫殿" />
+                  <span><strong>云海建筑</strong><small>通透、宁静、未来感</small></span>
+                </button>
+                <button
+                  class="inspiration-item"
+                  type="button"
+                  data-prompt-preset="巨大的淡紫色星球悬浮在粉色雪山湖面上，梦境光线，超现实摄影，高细节"
+                >
+                  <img src="/assets/work-lavender-orbit.jpg" alt="淡紫色梦境星球" />
+                  <span><strong>梦境星球</strong><small>柔光、超现实、空灵</small></span>
+                </button>
+                <button
+                  class="inspiration-item"
+                  type="button"
+                  data-prompt-preset="冰蓝色山谷中的透明艺术展馆，云层穿过玻璃立面，清晨薄雾，建筑摄影"
+                >
+                  <img src="/assets/work-ice-horizon.jpg" alt="冰蓝山谷与透明展馆" />
+                  <span><strong>冰境展馆</strong><small>冷静、建筑、高清</small></span>
+                </button>
+                <button
+                  class="inspiration-item"
+                  type="button"
+                  data-prompt-preset="粉紫色天空下的镜面湖泊与远山，太阳从地平线升起，宁静唯美，宽幅风景"
+                >
+                  <img src="/assets/work-pastel-lake.jpg" alt="粉紫色天空下的镜面湖泊" />
+                  <span><strong>粉彩湖面</strong><small>宽幅、唯美、治愈</small></span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="welcome-page welcome-content-page"
+            id="welcomePageGallery"
+            data-page="gallery"
+            aria-labelledby="galleryTitle"
+            aria-hidden="true"
+            inert
+          >
+            <div class="welcome-page-shell">
+              <header class="welcome-page-heading compact-heading">
+                <p>精选作品</p>
+                <h1 id="galleryTitle">灵感生成的美丽世界</h1>
+                <span>点击作品可查看完整画面。</span>
+              </header>
+              <div class="gallery-grid">
+                <button class="gallery-item tall" type="button" data-gallery-title="水晶黎明">
+                  <img src="/assets/work-crystal-dawn.jpg" alt="水晶黎明" />
+                  <span>水晶黎明</span>
+                </button>
+                <button class="gallery-item" type="button" data-gallery-title="云端之窗">
+                  <img src="/assets/work-cloud-window.jpg" alt="云端之窗" />
+                  <span>云端之窗</span>
+                </button>
+                <button class="gallery-item wide" type="button" data-gallery-title="薰衣草轨道">
+                  <img src="/assets/work-lavender-orbit.jpg" alt="薰衣草轨道" />
+                  <span>薰衣草轨道</span>
+                </button>
+                <button class="gallery-item" type="button" data-gallery-title="冰原地平线">
+                  <img src="/assets/work-ice-horizon.jpg" alt="冰原地平线" />
+                  <span>冰原地平线</span>
+                </button>
+                <button class="gallery-item tall" type="button" data-gallery-title="玻璃回廊">
+                  <img src="/assets/work-glass-passage.jpg" alt="玻璃回廊" />
+                  <span>玻璃回廊</span>
+                </button>
+                <button class="gallery-item wide" type="button" data-gallery-title="粉彩湖泊">
+                  <img src="/assets/work-pastel-lake.jpg" alt="粉彩湖泊" />
+                  <span>粉彩湖泊</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="welcome-page welcome-content-page"
+            id="welcomePagePricing"
+            data-page="pricing"
+            aria-labelledby="pricingTitle"
+            aria-hidden="true"
+            inert
+          >
+            <div class="welcome-page-shell narrow-shell">
+              <header class="welcome-page-heading">
+                <p>使用方案</p>
+                <h1 id="pricingTitle">清晰、直接，没有隐藏项目</h1>
+                <span>本站不额外收取服务费，图片生成额度由已配置的接口账户提供。</span>
+              </header>
+              <div class="plan-grid">
+                <article class="plan-item">
+                  <i data-lucide="wand-sparkles" aria-hidden="true"></i>
+                  <h2>自由创作</h2>
+                  <p>支持文生图与参考图创作，按接口实际能力提供参数。</p>
+                  <strong>网站服务费 0 元</strong>
+                </article>
+                <article class="plan-item featured">
+                  <i data-lucide="image-upscale" aria-hidden="true"></i>
+                  <h2>高清输出</h2>
+                  <p>支持多种画面比例，生成完成后可直接预览和下载原图。</p>
+                  <strong>完整功能已包含</strong>
+                </article>
+                <article class="plan-item">
+                  <i data-lucide="shield-check" aria-hidden="true"></i>
+                  <h2>后端托管</h2>
+                  <p>接口密钥仅保存在服务器环境变量中，不会发送到浏览器。</p>
+                  <strong>隐私设计已启用</strong>
+                </article>
+              </div>
+              <button class="content-cta" type="button" data-enter-studio>
+                <span>进入创作工作区</span>
+                <i data-lucide="arrow-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </section>
+
+          <section
+            class="welcome-page welcome-content-page"
+            id="welcomePageAbout"
+            data-page="about"
+            aria-labelledby="aboutTitle"
+            aria-hidden="true"
+            inert
+          >
+            <div class="welcome-page-shell about-shell">
+              <header class="welcome-page-heading">
+                <p>关于灵感画室</p>
+                <h1 id="aboutTitle">为专注创作而设计</h1>
+                <span>把复杂的图片接口整理成简单、直觉而可靠的创作流程。</span>
+              </header>
+              <div class="about-layout">
+                <div class="about-visual">
+                  <img src="/assets/reference-dream-gallery.jpg" alt="灵感画室梦境画廊" />
+                </div>
+                <div class="about-copy">
+                  <h2>从描述到画面，只保留必要步骤</h2>
+                  <p>输入想法、选择比例和清晰度，需要时添加参考图，然后等待作品完成。生成结果会直接显示在页面中并支持原图下载。</p>
+                  <dl>
+                    <div><dt>2 种</dt><dd>文生图与参考图模式</dd></div>
+                    <div><dt>3 种</dt><dd>常用画面比例</dd></div>
+                    <div><dt>10 分钟</dt><dd>长任务等待窗口</dd></div>
+                  </dl>
+                  <button class="content-cta align-start" type="button" data-enter-studio>
+                    <span>开始创作</span>
+                    <i data-lucide="arrow-right" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
+
+      <dialog class="gallery-dialog" id="galleryDialog" aria-labelledby="galleryDialogTitle">
+        <button class="gallery-dialog-close" id="galleryDialogClose" type="button" aria-label="关闭作品预览">
+          <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+        <img id="galleryDialogImage" alt="" />
+        <p id="galleryDialogTitle"></p>
+      </dialog>
     </div>
 
     <div class="studio-experience" id="studioExperience" aria-hidden="true" inert>
@@ -259,7 +446,6 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/welcome-scene.js?v=20260714-zh-welcome" type="module"></script>
-    <script src="/app.js?v=20260714-zh-welcome" type="module"></script>
+    <script src="/app.js?v=20260714-welcome-pages" type="module"></script>
   </body>
 </html>

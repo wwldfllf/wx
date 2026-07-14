@@ -5,6 +5,7 @@ const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const ENTER_TRANSITION_MS = 960;
 const RETURN_TRANSITION_MS = 840;
+const WELCOME_PAGES = new Set(["home", "explore", "gallery", "pricing", "about"]);
 
 const FALLBACK_CAPABILITIES = {
   models: [
@@ -62,14 +63,20 @@ const state = {
   generationStartedAt: 0,
   serverTimeoutMs: DEFAULT_SERVER_TIMEOUT_MS,
   progressTimer: null,
-  sceneTransitioning: false
+  sceneTransitioning: false,
+  welcomePage: "home"
 };
 
 const elements = {
   welcomeExperience: document.querySelector("#welcomeExperience"),
   welcomeHero: document.querySelector("#welcomeHero"),
   startStudioButton: document.querySelector("#startStudioButton"),
-  welcomeGetStarted: document.querySelector("#welcomeGetStarted"),
+  welcomePages: Array.from(document.querySelectorAll("[data-page]")),
+  welcomeNavButtons: Array.from(document.querySelectorAll("[data-welcome-page]")),
+  galleryDialog: document.querySelector("#galleryDialog"),
+  galleryDialogImage: document.querySelector("#galleryDialogImage"),
+  galleryDialogTitle: document.querySelector("#galleryDialogTitle"),
+  galleryDialogClose: document.querySelector("#galleryDialogClose"),
   studioExperience: document.querySelector("#studioExperience"),
   studioBrand: document.querySelector("#studioBrand"),
   pageTitle: document.querySelector("#pageTitle"),
@@ -121,20 +128,44 @@ async function init() {
 
 function bindEvents() {
   elements.startStudioButton.addEventListener("click", () => enterStudio(true));
-  elements.welcomeGetStarted.addEventListener("click", () => enterStudio(true));
 
-  document.querySelectorAll("[data-welcome-action]").forEach((button) => {
-    button.addEventListener("click", () => handleWelcomeNavAction(button.dataset.welcomeAction));
+  elements.welcomeNavButtons.forEach((button) => {
+    button.addEventListener("click", () => showWelcomePage(button.dataset.welcomePage, true));
+  });
+
+  document.querySelectorAll("[data-enter-studio]").forEach((button) => {
+    button.addEventListener("click", () => enterStudio(true));
+  });
+
+  document.querySelectorAll("[data-prompt-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      elements.prompt.value = button.dataset.promptPreset || "";
+      updatePromptCount();
+      enterStudio(true);
+      window.setTimeout(
+        () => elements.prompt.focus({ preventScroll: true }),
+        transitionDuration(ENTER_TRANSITION_MS) + 40
+      );
+    });
+  });
+
+  document.querySelectorAll(".gallery-item").forEach((button) => {
+    button.addEventListener("click", () => openGalleryItem(button));
+  });
+
+  elements.galleryDialogClose.addEventListener("click", () => elements.galleryDialog.close());
+  elements.galleryDialog.addEventListener("click", (event) => {
+    if (event.target === elements.galleryDialog) elements.galleryDialog.close();
   });
 
   elements.studioBrand.addEventListener("click", (event) => {
     event.preventDefault();
-    returnToWelcome(true);
+    returnToWelcome(true, "home");
   });
 
   document.querySelector(".welcome-brand")?.addEventListener("click", (event) => {
     event.preventDefault();
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    showWelcomePage("home", true);
   });
 
   window.addEventListener("popstate", syncExperienceToLocation);
@@ -196,16 +227,38 @@ function bindEvents() {
   });
 }
 
-function handleWelcomeNavAction(action) {
-  if (action === "about") {
-    document.querySelector(".welcome-benefits")?.scrollIntoView({
-      block: "end",
-      behavior: prefersReducedMotion() ? "auto" : "smooth"
-    });
-    return;
-  }
+function showWelcomePage(pageName, updateHistory) {
+  const page = WELCOME_PAGES.has(pageName) ? pageName : "home";
+  state.welcomePage = page;
+  document.body.dataset.welcomePage = page;
 
-  enterStudio(true);
+  elements.welcomePages.forEach((section) => {
+    const active = section.dataset.page === page;
+    section.classList.toggle("active", active);
+    section.setAttribute("aria-hidden", String(!active));
+    section.inert = !active;
+    if (active) section.scrollTop = 0;
+  });
+
+  elements.welcomeNavButtons.forEach((button) => {
+    const active = button.dataset.welcomePage === page;
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+
+  if (updateHistory && window.location.hash !== `#${page}`) {
+    window.history.pushState({ view: "welcome", page }, "", `#${page}`);
+  }
+}
+
+function openGalleryItem(button) {
+  const image = button.querySelector("img");
+  if (!image) return;
+  elements.galleryDialogImage.src = image.currentSrc || image.src;
+  elements.galleryDialogImage.alt = image.alt;
+  elements.galleryDialogTitle.textContent = button.dataset.galleryTitle || image.alt;
+  elements.galleryDialog.showModal();
 }
 
 function initializeExperience() {
@@ -214,10 +267,10 @@ function initializeExperience() {
     return;
   }
 
-  showWelcomeImmediately();
+  showWelcomeImmediately(welcomePageFromHash());
 }
 
-function showWelcomeImmediately() {
+function showWelcomeImmediately(page = "home") {
   document.body.classList.remove("studio-active", "scene-transitioning", "scene-returning");
   document.body.classList.add("welcome-active");
   elements.welcomeExperience.hidden = false;
@@ -225,6 +278,7 @@ function showWelcomeImmediately() {
   elements.welcomeExperience.inert = false;
   elements.studioExperience.setAttribute("aria-hidden", "true");
   elements.studioExperience.inert = true;
+  showWelcomePage(page, false);
   window.dispatchEvent(new CustomEvent("studio:welcome"));
 }
 
@@ -265,10 +319,11 @@ function enterStudio(updateHistory) {
   }, transitionDuration(ENTER_TRANSITION_MS));
 }
 
-function returnToWelcome(updateHistory) {
+function returnToWelcome(updateHistory, page = state.welcomePage) {
   if (state.sceneTransitioning || !document.body.classList.contains("studio-active")) return;
 
   state.sceneTransitioning = true;
+  showWelcomePage(page, false);
   elements.welcomeExperience.hidden = false;
   elements.welcomeExperience.inert = false;
   elements.welcomeExperience.setAttribute("aria-hidden", "false");
@@ -277,15 +332,17 @@ function returnToWelcome(updateHistory) {
   document.body.classList.add("scene-returning");
   window.dispatchEvent(new CustomEvent("studio:welcome"));
 
-  if (updateHistory && window.location.hash !== "#welcome") {
-    window.history.pushState({ view: "welcome" }, "", "#welcome");
+  if (updateHistory && window.location.hash !== `#${page}`) {
+    window.history.pushState({ view: "welcome", page }, "", `#${page}`);
   }
 
   window.setTimeout(() => {
     document.body.classList.remove("studio-active", "scene-returning");
     document.body.classList.add("welcome-active");
     window.scrollTo(0, 0);
-    elements.startStudioButton.focus({ preventScroll: true });
+    elements.welcomeNavButtons.find((button) => button.dataset.welcomePage === page)?.focus({
+      preventScroll: true
+    });
     state.sceneTransitioning = false;
   }, transitionDuration(RETURN_TRANSITION_MS));
 }
@@ -294,8 +351,15 @@ function syncExperienceToLocation() {
   if (window.location.hash === "#studio") {
     enterStudio(false);
   } else {
-    returnToWelcome(false);
+    const page = welcomePageFromHash();
+    showWelcomePage(page, false);
+    returnToWelcome(false, page);
   }
+}
+
+function welcomePageFromHash() {
+  const page = window.location.hash.replace(/^#/, "");
+  return WELCOME_PAGES.has(page) ? page : "home";
 }
 
 function transitionDuration(duration) {
