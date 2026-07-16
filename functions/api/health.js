@@ -1,7 +1,9 @@
 import { getConfig, json } from "../_lib/image-api.js";
+import { getVideoConfig } from "../_lib/video-api.js";
 
 export function onRequestGet({ env }) {
   const config = getConfig(env);
+  const videoConfig = getVideoConfig(env);
 
   return json({
     ok: Boolean(config.apiBaseUrl && config.apiKey),
@@ -15,7 +17,9 @@ export function onRequestGet({ env }) {
       IMAGE_MODEL_CONFIGURED: config.configuredModel || null,
       IMAGE_API_TRANSPORT_CONFIGURED: config.configuredTransport || null,
       IMAGE_UPSTREAM_TIMEOUT_MS_CONFIGURED: config.configuredUpstreamTimeoutMs || null,
-      IMAGE_UPSTREAM_TIMEOUT_MS: config.upstreamTimeoutMs
+      IMAGE_UPSTREAM_TIMEOUT_MS: config.upstreamTimeoutMs,
+      ARK_API_KEY: Boolean(videoConfig.apiKey),
+      ARK_VIDEO_MODEL: videoConfig.model || null
     }
   });
 }

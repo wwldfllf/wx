@@ -3,8 +3,11 @@ const DEFAULT_SERVER_TIMEOUT_MS = 600000;
 const CAPABILITY_TIMEOUT_MS = 30000;
 const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const ENTER_TRANSITION_MS = 960;
-const RETURN_TRANSITION_MS = 840;
+const ENTER_TRANSITION_MS = 1550;
+const RETURN_TRANSITION_MS = 1350;
+const PLATFORM_TRANSITION_MS = 900;
+const VIDEO_TASK_TIMEOUT_MS = 30 * 60 * 1000;
+const VIDEO_POLL_INTERVAL_MS = 5000;
 const WELCOME_PAGES = new Set(["home", "explore", "gallery", "pricing", "about"]);
 
 const FALLBACK_CAPABILITIES = {
@@ -64,7 +67,19 @@ const state = {
   serverTimeoutMs: DEFAULT_SERVER_TIMEOUT_MS,
   progressTimer: null,
   sceneTransitioning: false,
-  welcomePage: "home"
+  welcomePage: "home",
+  activePlatform: "image",
+  platformSwitching: false,
+  sizeMenuOpen: false,
+  sizeMenuFocusIndex: 0,
+  videoBackendReady: false,
+  videoCapabilities: null,
+  selectedVideoImage: null,
+  videoReferenceObjectUrl: null,
+  videoTaskController: null,
+  videoTaskStartedAt: 0,
+  videoProgressTimer: null,
+  lastVideoResult: null
 };
 
 const elements = {
@@ -79,12 +94,20 @@ const elements = {
   galleryDialogClose: document.querySelector("#galleryDialogClose"),
   studioExperience: document.querySelector("#studioExperience"),
   studioBrand: document.querySelector("#studioBrand"),
+  platformSwitch: document.querySelector("#platformSwitch"),
+  platformStage: document.querySelector("#platformStage"),
+  platformTabs: Array.from(document.querySelectorAll("[data-platform]")),
+  platformPanes: Array.from(document.querySelectorAll("[data-platform-pane]")),
   pageTitle: document.querySelector("#pageTitle"),
   form: document.querySelector("#generateForm"),
   prompt: document.querySelector("#prompt"),
   promptCount: document.querySelector("#promptCount"),
   model: document.querySelector("#model"),
   size: document.querySelector("#size"),
+  sizeMenu: document.querySelector("#sizeMenu"),
+  sizeMenuButton: document.querySelector("#sizeMenuButton"),
+  sizeMenuValue: document.querySelector("#sizeMenuValue"),
+  sizeMenuList: document.querySelector("#sizeMenuList"),
   quality: document.querySelector("#quality"),
   outputFormat: document.querySelector("#outputFormat"),
   imageInput: document.querySelector("#imageInput"),
@@ -111,7 +134,38 @@ const elements = {
   resultModel: document.querySelector("#resultModel"),
   resultSize: document.querySelector("#resultSize"),
   resultDuration: document.querySelector("#resultDuration"),
-  messageBox: document.querySelector("#messageBox")
+  messageBox: document.querySelector("#messageBox"),
+  videoForm: document.querySelector("#videoGenerateForm"),
+  videoPrompt: document.querySelector("#videoPrompt"),
+  videoPromptCount: document.querySelector("#videoPromptCount"),
+  videoImageInput: document.querySelector("#videoImageInput"),
+  videoUploadZone: document.querySelector("#videoUploadZone"),
+  clearVideoImageButton: document.querySelector("#clearVideoImageButton"),
+  videoReferencePreview: document.querySelector("#videoReferencePreview"),
+  videoReferenceImage: document.querySelector("#videoReferenceImage"),
+  videoReferenceName: document.querySelector("#videoReferenceName"),
+  videoReferenceMeta: document.querySelector("#videoReferenceMeta"),
+  videoModeLabel: document.querySelector("#videoModeLabel"),
+  videoCapabilitySource: document.querySelector("#videoCapabilitySource"),
+  videoModel: document.querySelector("#videoModel"),
+  videoResolution: document.querySelector("#videoResolution"),
+  videoDuration: document.querySelector("#videoDuration"),
+  videoDurationValue: document.querySelector("#videoDurationValue"),
+  videoAudio: document.querySelector("#videoAudio"),
+  videoSubmitButton: document.querySelector("#videoSubmitButton"),
+  videoResultStage: document.querySelector("#videoResultStage"),
+  videoEmptyState: document.querySelector("#videoEmptyState"),
+  videoLoadingState: document.querySelector("#videoLoadingState"),
+  videoLoadingTitle: document.querySelector("#videoLoadingTitle"),
+  videoLoadingMeta: document.querySelector("#videoLoadingMeta"),
+  videoProgressBar: document.querySelector("#videoProgressBar"),
+  resultVideo: document.querySelector("#resultVideo"),
+  videoDownloadButton: document.querySelector("#videoDownloadButton"),
+  videoResultFooter: document.querySelector("#videoResultFooter"),
+  videoResultModel: document.querySelector("#videoResultModel"),
+  videoResultRatio: document.querySelector("#videoResultRatio"),
+  videoResultDuration: document.querySelector("#videoResultDuration"),
+  videoMessageBox: document.querySelector("#videoMessageBox")
 };
 
 init();
@@ -121,13 +175,27 @@ async function init() {
   initializeExperience();
   bindEvents();
   updatePromptCount();
+  updateVideoPromptCount();
+  updateVideoDuration();
   renderCapabilities(FALLBACK_CAPABILITIES);
   setStageRatio(elements.size.value || "1024x1024");
-  await loadCapabilities();
+  setVideoStageRatio(selectedVideoRatio());
+  await Promise.all([loadCapabilities(), loadVideoCapabilities()]);
 }
 
 function bindEvents() {
   elements.startStudioButton.addEventListener("click", () => enterStudio(true));
+
+  elements.platformTabs.forEach((button) => {
+    button.addEventListener("click", () => switchPlatform(button.dataset.platform));
+  });
+
+  elements.sizeMenuButton.addEventListener("click", () => toggleSizeMenu());
+  elements.sizeMenuButton.addEventListener("keydown", handleSizeMenuKeydown);
+  elements.sizeMenuList.addEventListener("keydown", handleSizeMenuKeydown);
+  document.addEventListener("pointerdown", (event) => {
+    if (state.sizeMenuOpen && !elements.sizeMenu.contains(event.target)) closeSizeMenu();
+  });
 
   elements.welcomeNavButtons.forEach((button) => {
     button.addEventListener("click", () => showWelcomePage(button.dataset.welcomePage, true));
@@ -186,6 +254,7 @@ function bindEvents() {
 
   elements.size.addEventListener("change", () => {
     setStageRatio(elements.size.value);
+    syncSizeMenuSelection();
   });
 
   elements.imageInput.addEventListener("change", () => {
@@ -218,13 +287,272 @@ function bindEvents() {
     const image = Array.from(event.clipboardData?.files || []).find((file) =>
       ACCEPTED_IMAGE_TYPES.has(file.type)
     );
-    if (image) setReferenceImage(image);
+    if (!image) return;
+    if (state.activePlatform === "video") setVideoReferenceImage(image);
+    else setReferenceImage(image);
   });
 
   elements.form.addEventListener("submit", async (event) => {
     event.preventDefault();
     await generateImage();
   });
+
+  elements.videoPrompt.addEventListener("input", updateVideoPromptCount);
+  elements.videoPrompt.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      elements.videoForm.requestSubmit();
+    }
+  });
+
+  elements.videoImageInput.addEventListener("change", () => {
+    const file = elements.videoImageInput.files?.[0];
+    if (file) setVideoReferenceImage(file);
+  });
+  elements.clearVideoImageButton.addEventListener("click", clearVideoReferenceImage);
+
+  for (const eventName of ["dragenter", "dragover"]) {
+    elements.videoUploadZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      elements.videoUploadZone.classList.add("dragging");
+    });
+  }
+  for (const eventName of ["dragleave", "drop"]) {
+    elements.videoUploadZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      elements.videoUploadZone.classList.remove("dragging");
+    });
+  }
+  elements.videoUploadZone.addEventListener("drop", (event) => {
+    const file = event.dataTransfer?.files?.[0];
+    if (file) setVideoReferenceImage(file);
+  });
+
+  elements.videoDuration.addEventListener("input", updateVideoDuration);
+  document.querySelectorAll('input[name="video_ratio"]').forEach((input) => {
+    input.addEventListener("change", () => setVideoStageRatio(input.value));
+  });
+  elements.videoForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await generateVideo();
+  });
+}
+
+function switchPlatform(platform) {
+  if (
+    !["image", "video"].includes(platform) ||
+    platform === state.activePlatform ||
+    state.platformSwitching
+  ) {
+    return;
+  }
+
+  closeSizeMenu();
+  state.platformSwitching = true;
+  const current = elements.platformPanes.find((pane) => pane.dataset.platformPane === state.activePlatform);
+  const incoming = elements.platformPanes.find((pane) => pane.dataset.platformPane === platform);
+  if (!current || !incoming) {
+    state.platformSwitching = false;
+    return;
+  }
+
+  elements.platformTabs.forEach((button) => {
+    button.disabled = true;
+    const active = button.dataset.platform === platform;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  elements.platformSwitch.dataset.active = platform;
+
+  const startHeight = current.getBoundingClientRect().height;
+  const duration = transitionDuration(PLATFORM_TRANSITION_MS);
+  elements.platformStage.style.height = `${startHeight}px`;
+  elements.platformStage.style.overflow = "hidden";
+
+  current.classList.add("leaving");
+  current.classList.remove("active");
+  current.setAttribute("aria-hidden", "true");
+  current.inert = true;
+
+  incoming.classList.add("active");
+  incoming.setAttribute("aria-hidden", "false");
+  incoming.inert = false;
+  const targetHeight = incoming.scrollHeight;
+  const incomingAnimation = incoming.animate(
+    [
+      { opacity: 0, transform: "translateY(28px) scale(0.988)" },
+      { opacity: 1, transform: "translateY(0) scale(1)" }
+    ],
+    {
+      duration,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      fill: "both"
+    }
+  );
+  const stageAnimation = elements.platformStage.animate(
+    [{ height: `${startHeight}px` }, { height: `${targetHeight}px` }],
+    {
+      duration,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      fill: "both"
+    }
+  );
+
+  state.activePlatform = platform;
+  updatePlatformStatus();
+
+  window.setTimeout(() => {
+    incomingAnimation.cancel();
+    stageAnimation.cancel();
+    current.classList.remove("leaving");
+    elements.platformStage.style.height = "";
+    elements.platformStage.style.overflow = "";
+    elements.platformTabs.forEach((button) => {
+      button.disabled = false;
+    });
+    state.platformSwitching = false;
+  }, duration);
+}
+
+function updatePlatformStatus() {
+  if (state.activePlatform === "video") {
+    if (state.videoTaskController) setStatus("busy", "正在生成视频");
+    else if (state.videoBackendReady) setStatus("ready", "视频服务已连接");
+    else setStatus("error", "视频服务未配置");
+    return;
+  }
+
+  if (state.generationController) setStatus("busy", "正在生成图片");
+  else if (state.backendReady) setStatus("ready", "图片服务已连接");
+  else setStatus("error", "图片服务未连接");
+}
+
+function renderSizeMenu() {
+  const options = Array.from(elements.size.options);
+  elements.sizeMenuList.replaceChildren();
+
+  options.forEach((option, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "glass-select-option";
+    button.dataset.value = option.value;
+    button.dataset.index = String(index);
+    button.id = `size-option-${index}`;
+    button.setAttribute("role", "option");
+
+    const shape = document.createElement("span");
+    shape.className = "ratio-shape";
+    const dimensions = ratioShapeDimensions(option.value);
+    shape.style.setProperty("--ratio-width", `${dimensions.width}px`);
+    shape.style.setProperty("--ratio-height", `${dimensions.height}px`);
+
+    const label = document.createElement("strong");
+    label.textContent = option.textContent;
+
+    const check = document.createElement("span");
+    check.className = "option-check";
+    check.setAttribute("aria-hidden", "true");
+
+    button.append(shape, label, check);
+    button.addEventListener("click", () => selectSizeOption(option.value));
+    button.addEventListener("pointermove", () => {
+      state.sizeMenuFocusIndex = index;
+      syncSizeMenuFocus();
+    });
+    elements.sizeMenuList.append(button);
+  });
+
+  syncSizeMenuSelection();
+}
+
+function ratioShapeDimensions(value) {
+  const match = String(value).match(/^(\d+)x(\d+)$/);
+  if (!match) return { width: 22, height: 18 };
+  const ratio = Number(match[1]) / Number(match[2]);
+  if (ratio >= 1) return { width: 24, height: Math.max(11, Math.round(24 / ratio)) };
+  return { width: Math.max(11, Math.round(24 * ratio)), height: 24 };
+}
+
+function selectSizeOption(value) {
+  if (!Array.from(elements.size.options).some((option) => option.value === value)) return;
+  elements.size.value = value;
+  elements.size.dispatchEvent(new Event("change", { bubbles: true }));
+  closeSizeMenu({ returnFocus: true });
+}
+
+function syncSizeMenuSelection() {
+  const selected = elements.size.selectedOptions[0];
+  elements.sizeMenuValue.textContent = selected?.textContent || SIZE_LABELS[elements.size.value] || "选择比例";
+  const optionButtons = Array.from(elements.sizeMenuList.querySelectorAll(".glass-select-option"));
+  optionButtons.forEach((button, index) => {
+    const active = button.dataset.value === elements.size.value;
+    button.classList.toggle("selected", active);
+    button.setAttribute("aria-selected", String(active));
+    if (active) state.sizeMenuFocusIndex = index;
+  });
+  syncSizeMenuFocus();
+}
+
+function syncSizeMenuFocus() {
+  const options = Array.from(elements.sizeMenuList.querySelectorAll(".glass-select-option"));
+  options.forEach((button, index) => button.classList.toggle("focused", index === state.sizeMenuFocusIndex));
+  const focused = options[state.sizeMenuFocusIndex];
+  if (focused) elements.sizeMenuButton.setAttribute("aria-activedescendant", focused.id);
+}
+
+function toggleSizeMenu(forceOpen) {
+  const open = typeof forceOpen === "boolean" ? forceOpen : !state.sizeMenuOpen;
+  if (open) openSizeMenu();
+  else closeSizeMenu();
+}
+
+function openSizeMenu({ focusOption = false } = {}) {
+  if (state.sizeMenuOpen) return;
+  state.sizeMenuOpen = true;
+  elements.sizeMenu.classList.add("open");
+  elements.sizeMenuButton.setAttribute("aria-expanded", "true");
+  syncSizeMenuSelection();
+  if (focusOption) {
+    requestAnimationFrame(() => {
+      elements.sizeMenuList.querySelectorAll(".glass-select-option")[state.sizeMenuFocusIndex]?.focus();
+    });
+  }
+}
+
+function closeSizeMenu({ returnFocus = false } = {}) {
+  if (!state.sizeMenuOpen) return;
+  state.sizeMenuOpen = false;
+  elements.sizeMenu.classList.remove("open");
+  elements.sizeMenuButton.setAttribute("aria-expanded", "false");
+  if (returnFocus) elements.sizeMenuButton.focus({ preventScroll: true });
+}
+
+function handleSizeMenuKeydown(event) {
+  const options = Array.from(elements.sizeMenuList.querySelectorAll(".glass-select-option"));
+  if (!options.length) return;
+
+  if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+    event.preventDefault();
+    if (!state.sizeMenuOpen) openSizeMenu();
+    const direction = event.key === "ArrowDown" ? 1 : -1;
+    state.sizeMenuFocusIndex =
+      (state.sizeMenuFocusIndex + direction + options.length) % options.length;
+    syncSizeMenuFocus();
+    options[state.sizeMenuFocusIndex].focus();
+    return;
+  }
+
+  if (["Enter", " "].includes(event.key)) {
+    event.preventDefault();
+    if (!state.sizeMenuOpen) openSizeMenu({ focusOption: true });
+    else selectSizeOption(options[state.sizeMenuFocusIndex].dataset.value);
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeSizeMenu({ returnFocus: true });
+  }
 }
 
 function showWelcomePage(pageName, updateHistory) {
@@ -371,7 +699,7 @@ function prefersReducedMotion() {
 }
 
 async function loadCapabilities() {
-  setStatus("checking", "正在连接服务");
+  if (state.activePlatform === "image") setStatus("checking", "正在连接图片服务");
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), CAPABILITY_TIMEOUT_MS);
 
@@ -395,12 +723,12 @@ async function loadCapabilities() {
     renderCapabilities(body);
     elements.capabilitySource.textContent = "服务实时探测";
     elements.submitButton.disabled = false;
-    setStatus("ready", "服务已连接");
+    if (state.activePlatform === "image") setStatus("ready", "图片服务已连接");
   } catch (error) {
     state.backendReady = false;
     elements.submitButton.disabled = true;
     elements.capabilitySource.textContent = "探测失败";
-    setStatus("error", "后端未连接");
+    if (state.activePlatform === "image") setStatus("error", "图片服务未连接");
 
     const message =
       error.name === "AbortError"
@@ -410,6 +738,68 @@ async function loadCapabilities() {
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+async function loadVideoCapabilities() {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), CAPABILITY_TIMEOUT_MS);
+
+  try {
+    const response = await fetch("/api/video/capabilities", {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+      cache: "no-store"
+    });
+    const body = await readResponseBody(response);
+    if (!response.ok) throw new Error(getApiErrorMessage(body) || `HTTP ${response.status}`);
+
+    state.videoCapabilities = body;
+    state.videoBackendReady = Boolean(body.configured && body.model?.id);
+    elements.videoCapabilitySource.textContent = state.videoBackendReady ? "方舟服务已配置" : "后端尚未配置";
+    elements.videoSubmitButton.disabled = !state.videoBackendReady;
+
+    if (body.model?.id) {
+      elements.videoModel.replaceChildren();
+      const option = document.createElement("option");
+      const modelLabel = body.model.label || "Seedance 2.0 Mini";
+      option.value = body.model.id;
+      option.textContent = /seedance\s*2(?:\.0)?\s*mini/i.test(modelLabel)
+        ? "Seedance 2.0 Mini"
+        : modelLabel;
+      elements.videoModel.append(option);
+      elements.videoModel.title = modelLabel;
+      elements.videoResultModel.textContent = modelLabel;
+    }
+
+    replaceSimpleOptions(elements.videoResolution, body.resolutions || ["480p", "720p"], {
+      "480p": "480P",
+      "720p": "720P"
+    });
+    if (Array.from(elements.videoResolution.options).some((option) => option.value === "720p")) {
+      elements.videoResolution.value = "720p";
+    }
+    if (state.activePlatform === "video") updatePlatformStatus();
+  } catch (error) {
+    state.videoBackendReady = false;
+    elements.videoSubmitButton.disabled = true;
+    elements.videoCapabilitySource.textContent =
+      error.name === "AbortError" ? "配置探测超时" : "视频服务不可用";
+    if (state.activePlatform === "video") updatePlatformStatus();
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function replaceSimpleOptions(select, values, labels = {}) {
+  const previous = select.value;
+  select.replaceChildren();
+  values.forEach((value) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = labels[value] || value;
+    select.append(option);
+  });
+  if (values.includes(previous)) select.value = previous;
 }
 
 function renderCapabilities(capabilities) {
@@ -438,6 +828,7 @@ function renderParameterOptions(model) {
   fillSelect(elements.size, model?.sizes || ["1024x1024"], SIZE_LABELS);
   fillSelect(elements.quality, model?.qualities || ["gateway-default"], QUALITY_LABELS);
   fillSelect(elements.outputFormat, model?.formats || ["png"], FORMAT_LABELS);
+  renderSizeMenu();
   setStageRatio(elements.size.value);
 }
 
@@ -507,6 +898,264 @@ function clearReferenceImage() {
   }
 }
 
+function updateVideoPromptCount() {
+  elements.videoPromptCount.textContent = `${elements.videoPrompt.value.length} / 4000`;
+}
+
+function setVideoReferenceImage(file) {
+  if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+    showVideoMessage("首帧参考图仅支持 PNG、JPEG 或 WebP。", "error");
+    return;
+  }
+  if (file.size > MAX_REFERENCE_BYTES) {
+    showVideoMessage("首帧参考图不能超过 20 MB。", "error");
+    return;
+  }
+
+  state.selectedVideoImage = file;
+  if (state.videoReferenceObjectUrl) URL.revokeObjectURL(state.videoReferenceObjectUrl);
+  state.videoReferenceObjectUrl = URL.createObjectURL(file);
+  elements.videoReferenceImage.src = state.videoReferenceObjectUrl;
+  elements.videoReferenceName.textContent = file.name || "first-frame.png";
+  elements.videoReferenceMeta.textContent = `${formatBytes(file.size)} · 首帧生视频模式`;
+  elements.videoReferencePreview.hidden = false;
+  elements.videoUploadZone.hidden = true;
+  elements.videoModeLabel.textContent = "首帧生视频";
+  hideVideoMessage();
+}
+
+function clearVideoReferenceImage() {
+  state.selectedVideoImage = null;
+  elements.videoImageInput.value = "";
+  elements.videoReferencePreview.hidden = true;
+  elements.videoUploadZone.hidden = false;
+  elements.videoModeLabel.textContent = "文生视频";
+  if (state.videoReferenceObjectUrl) {
+    URL.revokeObjectURL(state.videoReferenceObjectUrl);
+    state.videoReferenceObjectUrl = null;
+  }
+}
+
+function selectedVideoRatio() {
+  return document.querySelector('input[name="video_ratio"]:checked')?.value || "16:9";
+}
+
+function setVideoStageRatio(ratio) {
+  const match = String(ratio).match(/^(\d+):(\d+)$/);
+  const cssRatio = match ? `${match[1]} / ${match[2]}` : "16 / 9";
+  elements.videoResultStage.style.setProperty("--video-result-ratio", cssRatio);
+}
+
+function updateVideoDuration() {
+  const value = Number(elements.videoDuration.value) || 5;
+  const min = Number(elements.videoDuration.min) || 4;
+  const max = Number(elements.videoDuration.max) || 15;
+  const percent = ((value - min) / Math.max(1, max - min)) * 100;
+  elements.videoDurationValue.textContent = `${value} 秒`;
+  elements.videoDuration.style.setProperty("--range-progress", `${percent}%`);
+}
+
+async function generateVideo() {
+  const prompt = elements.videoPrompt.value.trim();
+  if (!state.videoBackendReady) {
+    showVideoMessage("视频后端尚未配置，请检查方舟密钥和模型 ID。", "error");
+    return;
+  }
+  if (!prompt) {
+    showVideoMessage("请先输入镜头描述。", "error");
+    elements.videoPrompt.focus();
+    return;
+  }
+
+  const controller = new AbortController();
+  state.videoTaskController = controller;
+  state.videoTaskStartedAt = Date.now();
+  const timeoutId = window.setTimeout(() => controller.abort(), VIDEO_TASK_TIMEOUT_MS);
+  const formData = new FormData();
+  formData.append("prompt", prompt);
+  formData.append("model", elements.videoModel.value);
+  formData.append("ratio", selectedVideoRatio());
+  formData.append("resolution", elements.videoResolution.value);
+  formData.append("duration", elements.videoDuration.value);
+  formData.append("generate_audio", String(elements.videoAudio.checked));
+  if (state.selectedVideoImage) {
+    formData.append(
+      "first_frame",
+      state.selectedVideoImage,
+      state.selectedVideoImage.name || "first-frame.png"
+    );
+  }
+
+  setVideoLoading(true);
+  hideVideoMessage();
+  startVideoProgressTimer();
+
+  try {
+    const createResponse = await fetch("/api/video/generate", {
+      method: "POST",
+      body: formData,
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+      cache: "no-store"
+    });
+    const createBody = await readResponseBody(createResponse);
+    if (!createResponse.ok) {
+      throw createRequestError(createResponse.status, getApiErrorMessage(createBody), createBody.details);
+    }
+    if (!createBody.taskId) {
+      throw createRequestError(502, "方舟已响应，但没有返回视频任务 ID。", {});
+    }
+
+    elements.videoLoadingTitle.textContent = "视频任务已提交";
+    const result = await pollVideoTask(createBody.taskId, controller.signal);
+    showVideoResult(result);
+    if (state.activePlatform === "video") setStatus("ready", "视频生成完成");
+  } catch (error) {
+    const message =
+      error.name === "AbortError"
+        ? "视频任务等待超过 30 分钟，本次查询已停止。"
+        : formatVideoError(error.status, error.message);
+    showVideoMessage(message, "error");
+    if (state.activePlatform === "video") setStatus("error", "视频生成失败");
+  } finally {
+    window.clearTimeout(timeoutId);
+    stopVideoProgressTimer();
+    state.videoTaskController = null;
+    setVideoLoading(false);
+  }
+}
+
+async function pollVideoTask(taskId, signal) {
+  while (!signal.aborted) {
+    const response = await fetch(`/api/video/tasks/${encodeURIComponent(taskId)}`, {
+      signal,
+      headers: { Accept: "application/json" },
+      cache: "no-store"
+    });
+    const body = await readResponseBody(response);
+    if (!response.ok) {
+      throw createRequestError(response.status, getApiErrorMessage(body), body.details);
+    }
+
+    const status = String(body.status || "").toLowerCase();
+    updateVideoTaskProgress(body);
+    if (["succeeded", "success", "completed"].includes(status)) {
+      if (!body.videoUrl) throw createRequestError(502, "视频任务完成，但没有返回视频地址。", {});
+      return body;
+    }
+    if (["failed", "error", "cancelled", "canceled"].includes(status)) {
+      throw createRequestError(502, body.error || `视频任务状态：${status}`, body);
+    }
+
+    await waitForVideoPoll(signal);
+  }
+  throw new DOMException("Aborted", "AbortError");
+}
+
+function waitForVideoPoll(signal) {
+  return new Promise((resolve, reject) => {
+    const handleAbort = () => {
+      window.clearTimeout(timeoutId);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    const timeoutId = window.setTimeout(() => {
+      signal.removeEventListener("abort", handleAbort);
+      resolve();
+    }, VIDEO_POLL_INTERVAL_MS);
+    signal.addEventListener("abort", handleAbort, { once: true });
+  });
+}
+
+function updateVideoTaskProgress(task) {
+  const status = String(task.status || "").toLowerCase();
+  if (["queued", "pending", "created"].includes(status)) {
+    elements.videoLoadingTitle.textContent = "正在排队等待算力";
+  } else {
+    elements.videoLoadingTitle.textContent = "正在生成视频镜头";
+  }
+  if (Number.isFinite(Number(task.progress))) {
+    elements.videoProgressBar.style.width = `${Math.min(98, Math.max(3, Number(task.progress)))}%`;
+  }
+}
+
+function startVideoProgressTimer() {
+  stopVideoProgressTimer();
+  updateVideoProgress();
+  state.videoProgressTimer = window.setInterval(updateVideoProgress, 1000);
+}
+
+function stopVideoProgressTimer() {
+  if (state.videoProgressTimer) window.clearInterval(state.videoProgressTimer);
+  state.videoProgressTimer = null;
+}
+
+function updateVideoProgress() {
+  const elapsedMs = Math.max(0, Date.now() - (state.videoTaskStartedAt || Date.now()));
+  const percent = Math.min(92, Math.max(2, (elapsedMs / VIDEO_TASK_TIMEOUT_MS) * 100));
+  if (!elements.videoProgressBar.style.width || percent > parseFloat(elements.videoProgressBar.style.width)) {
+    elements.videoProgressBar.style.width = `${percent}%`;
+  }
+  elements.videoLoadingMeta.textContent = `已等待 ${formatDuration(elapsedMs)} · 视频任务可能需要数分钟`;
+}
+
+function showVideoResult(result) {
+  state.lastVideoResult = result;
+  elements.resultVideo.src = result.videoUrl;
+  elements.resultVideo.hidden = false;
+  elements.resultVideo.load();
+  elements.videoEmptyState.hidden = true;
+  elements.videoLoadingState.hidden = true;
+  elements.videoDownloadButton.href = result.videoUrl;
+  elements.videoDownloadButton.hidden = false;
+  elements.videoResultModel.textContent = result.modelLabel || "Seedance 2.0 Mini";
+  elements.videoResultRatio.textContent = result.ratio || selectedVideoRatio();
+  elements.videoResultDuration.textContent = `${result.duration || elements.videoDuration.value} 秒`;
+  elements.videoResultFooter.hidden = false;
+}
+
+function setVideoLoading(isLoading) {
+  elements.videoSubmitButton.classList.toggle("is-loading", isLoading);
+  elements.videoSubmitButton.disabled = isLoading || !state.videoBackendReady;
+  elements.videoSubmitButton.querySelector("span").textContent = isLoading ? "正在生成" : "生成视频";
+  elements.videoLoadingState.hidden = !isLoading;
+
+  if (isLoading) {
+    elements.resultVideo.pause();
+    elements.resultVideo.hidden = true;
+    elements.videoEmptyState.hidden = true;
+    elements.videoDownloadButton.hidden = true;
+    elements.videoResultFooter.hidden = true;
+    if (state.activePlatform === "video") setStatus("busy", "正在生成视频");
+  } else if (state.lastVideoResult) {
+    elements.resultVideo.hidden = false;
+    elements.videoEmptyState.hidden = true;
+    elements.videoDownloadButton.hidden = false;
+    elements.videoResultFooter.hidden = false;
+  } else {
+    elements.resultVideo.hidden = true;
+    elements.videoEmptyState.hidden = false;
+  }
+}
+
+function showVideoMessage(message, type = "info") {
+  elements.videoMessageBox.textContent = message;
+  elements.videoMessageBox.classList.toggle("error", type === "error");
+  elements.videoMessageBox.hidden = false;
+}
+
+function hideVideoMessage() {
+  elements.videoMessageBox.hidden = true;
+  elements.videoMessageBox.textContent = "";
+  elements.videoMessageBox.classList.remove("error");
+}
+
+function formatVideoError(status, message) {
+  const detail = String(message || "").trim();
+  if (status === 401 || status === 403) return `方舟密钥无效或没有视频模型权限。${appendDetail(detail)}`;
+  if (status === 429) return `方舟视频服务当前请求较多，请稍后重试。${appendDetail(detail)}`;
+  return detail || `视频生成失败（HTTP ${status || 500}）。`;
+}
+
 async function generateImage() {
   const prompt = elements.prompt.value.trim();
 
@@ -546,14 +1195,14 @@ async function generateImage() {
     const result = await generateWithStream(formData, controller.signal);
     const elapsedMs = Date.now() - state.generationStartedAt;
     showResult(result, elapsedMs);
-    setStatus("ready", "生成完成");
+    if (state.activePlatform === "image") setStatus("ready", "图片生成完成");
   } catch (error) {
     const message =
       error.name === "AbortError"
         ? "本次生成已等待超过 10 分 30 秒，连接已结束。"
         : formatGenerateError(error.status, error.message, error.details);
     showMessage(message, "error");
-    setStatus("error", "生成失败");
+    if (state.activePlatform === "image") setStatus("error", "图片生成失败");
   } finally {
     window.clearTimeout(timeoutId);
     stopProgressTimer();
@@ -725,7 +1374,7 @@ function setLoading(isLoading) {
     elements.emptyState.hidden = true;
     elements.downloadButton.hidden = true;
     elements.resultFooter.hidden = true;
-    setStatus("busy", "正在生成图片");
+    if (state.activePlatform === "image") setStatus("busy", "正在生成图片");
     return;
   }
 

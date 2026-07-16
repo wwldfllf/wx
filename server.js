@@ -3,6 +3,13 @@ import express from "express";
 import multer from "multer";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  createVideoTask,
+  getVideoConfig,
+  getVideoTask,
+  parseVideoForm,
+  videoCapabilities
+} from "./functions/_lib/video-api.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,7 +19,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     files: 1,
-    fileSize: 12 * 1024 * 1024
+    fileSize: 20 * 1024 * 1024
   }
 });
 
@@ -21,6 +28,7 @@ const API_BASE_URL = normalizeBaseUrl(process.env.IMAGE_API_BASE_URL);
 const API_KEY = process.env.IMAGE_API_KEY;
 const DEFAULT_MODEL = "gpt-image-2";
 const UPSTREAM_TIMEOUT_MS = parseTimeoutMs(process.env.IMAGE_UPSTREAM_TIMEOUT_MS);
+const VIDEO_CONFIG = getVideoConfig(process.env);
 
 const STATIC_DIR = path.join(__dirname, "public");
 
@@ -39,7 +47,9 @@ app.get("/api/health", (_req, res) => {
       IMAGE_MODEL: DEFAULT_MODEL,
       IMAGE_MODEL_CONFIGURED: process.env.IMAGE_MODEL || null,
       IMAGE_UPSTREAM_TIMEOUT_MS_CONFIGURED: process.env.IMAGE_UPSTREAM_TIMEOUT_MS || null,
-      IMAGE_UPSTREAM_TIMEOUT_MS: UPSTREAM_TIMEOUT_MS
+      IMAGE_UPSTREAM_TIMEOUT_MS: UPSTREAM_TIMEOUT_MS,
+      ARK_API_KEY: Boolean(VIDEO_CONFIG.apiKey),
+      ARK_VIDEO_MODEL: VIDEO_CONFIG.model || null
     }
   });
 });
@@ -57,6 +67,53 @@ app.get("/api/capabilities", async (_req, res) => {
     defaultModel: DEFAULT_MODEL,
     source: "image2-docs"
   });
+});
+
+app.get("/api/video/capabilities", (_req, res) => {
+  res.json(videoCapabilities(VIDEO_CONFIG));
+});
+
+app.post("/api/video/generate", upload.single("first_frame"), async (req, res) => {
+  if (!VIDEO_CONFIG.apiKey || !VIDEO_CONFIG.model) {
+    res.status(500).json({ error: "后端尚未配置 ARK_API_KEY 或 ARK_VIDEO_MODEL。" });
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(req.body || {})) {
+      formData.append(key, String(value));
+    }
+    if (req.file) {
+      formData.append(
+        "first_frame",
+        new Blob([req.file.buffer], { type: req.file.mimetype || "image/png" }),
+        req.file.originalname || "first-frame.png"
+      );
+    }
+    res.json(await createVideoTask(VIDEO_CONFIG, parseVideoForm(formData)));
+  } catch (error) {
+    res.status(error.status || 500).json({
+      error: error.message || "视频任务创建失败。",
+      details: error.details
+    });
+  }
+});
+
+app.get("/api/video/tasks/:id", async (req, res) => {
+  if (!VIDEO_CONFIG.apiKey || !VIDEO_CONFIG.model) {
+    res.status(500).json({ error: "后端尚未配置 ARK_API_KEY 或 ARK_VIDEO_MODEL。" });
+    return;
+  }
+
+  try {
+    res.json(await getVideoTask(VIDEO_CONFIG, String(req.params.id || "")));
+  } catch (error) {
+    res.status(error.status || 500).json({
+      error: error.message || "视频任务查询失败。",
+      details: error.details
+    });
+  }
 });
 
 app.post("/api/generate", upload.single("image"), async (req, res) => {

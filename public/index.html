@@ -9,7 +9,7 @@
       content="灵感画室 - 使用 GPT Image 2 进行文生图与参考图创作。"
     />
     <title>灵感画室</title>
-    <link rel="stylesheet" href="/styles.css?v=20260714-pages-align" />
+    <link rel="stylesheet" href="/styles.css?v=20260715-video-workspace" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -273,15 +273,50 @@
       </header>
 
       <main class="app-shell">
-        <section class="page-heading" aria-labelledby="pageTitle">
-          <div>
-            <p class="eyebrow">图像创作工作台</p>
-            <h1 id="pageTitle">把想法变成 <span>画面</span></h1>
-          </div>
-          <p class="mode-label" id="modeLabel">文生图</p>
-        </section>
+        <div class="platform-switch" id="platformSwitch" role="tablist" aria-label="生成平台">
+          <span class="platform-switch-indicator" aria-hidden="true"></span>
+          <button
+            class="active"
+            id="imagePlatformTab"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="imagePlatformPane"
+            data-platform="image"
+          >
+            <i data-lucide="image" aria-hidden="true"></i>
+            <span>图片生成</span>
+          </button>
+          <button
+            id="videoPlatformTab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="videoPlatformPane"
+            data-platform="video"
+          >
+            <i data-lucide="video" aria-hidden="true"></i>
+            <span>视频生成</span>
+          </button>
+        </div>
 
-        <section class="workspace">
+        <div class="platform-stage" id="platformStage">
+          <section
+            class="platform-pane active"
+            id="imagePlatformPane"
+            role="tabpanel"
+            aria-labelledby="imagePlatformTab"
+            data-platform-pane="image"
+          >
+            <section class="page-heading" aria-labelledby="pageTitle">
+              <div>
+                <p class="eyebrow">图像创作工作台</p>
+                <h1 id="pageTitle">把想法变成 <span>画面</span></h1>
+              </div>
+              <p class="mode-label" id="modeLabel">文生图</p>
+            </section>
+
+            <section class="workspace">
           <form class="control-panel" id="generateForm">
             <header class="panel-heading">
               <span class="section-index">01</span>
@@ -359,8 +394,34 @@
                 </div>
 
                 <div class="field">
-                  <label for="size">比例</label>
-                  <select id="size" name="size" aria-label="图片比例"></select>
+                  <span class="field-control-label" id="sizeLabel">比例</span>
+                  <div class="glass-select" id="sizeMenu">
+                    <button
+                      class="glass-select-trigger"
+                      id="sizeMenuButton"
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      aria-labelledby="sizeLabel sizeMenuValue"
+                    >
+                      <span id="sizeMenuValue">正方形 · 1:1</span>
+                      <i data-lucide="chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div
+                      class="glass-select-popover"
+                      id="sizeMenuList"
+                      role="listbox"
+                      aria-label="图片比例"
+                    ></div>
+                    <select
+                      class="native-select-proxy"
+                      id="size"
+                      name="size"
+                      aria-hidden="true"
+                      tabindex="-1"
+                      hidden
+                    ></select>
+                  </div>
                 </div>
 
                 <div class="field">
@@ -441,11 +502,201 @@
 
             <div class="message-box" id="messageBox" role="alert" hidden></div>
           </section>
-        </section>
+            </section>
+          </section>
+
+          <section
+            class="platform-pane"
+            id="videoPlatformPane"
+            role="tabpanel"
+            aria-labelledby="videoPlatformTab"
+            aria-hidden="true"
+            inert
+            data-platform-pane="video"
+          >
+            <section class="page-heading" aria-labelledby="videoPageTitle">
+              <div>
+                <p class="eyebrow">视频创作工作台</p>
+                <h1 id="videoPageTitle">让画面开始 <span>流动</span></h1>
+              </div>
+              <p class="mode-label" id="videoModeLabel">文生视频</p>
+            </section>
+
+            <section class="workspace video-workspace">
+              <form class="control-panel" id="videoGenerateForm">
+                <header class="panel-heading">
+                  <span class="section-index">01</span>
+                  <div>
+                    <p class="panel-kicker">镜头</p>
+                    <h2>描述你的视频</h2>
+                  </div>
+                </header>
+
+                <div class="field prompt-field">
+                  <div class="field-label-row">
+                    <label for="videoPrompt">镜头描述</label>
+                    <span id="videoPromptCount">0 / 4000</span>
+                  </div>
+                  <textarea
+                    id="videoPrompt"
+                    name="prompt"
+                    rows="7"
+                    maxlength="4000"
+                    placeholder="例如：镜头缓慢穿过清晨云海中的玻璃宫殿，柔和日光，电影感运镜"
+                    required
+                  ></textarea>
+                </div>
+
+                <div class="reference-block">
+                  <div class="field-label-row">
+                    <label for="videoImageInput">首帧参考图</label>
+                    <span>可选 · PNG、JPEG、WebP</span>
+                  </div>
+                  <label class="upload-zone" id="videoUploadZone" for="videoImageInput">
+                    <input
+                      id="videoImageInput"
+                      name="first_frame"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                    />
+                    <span class="upload-icon" aria-hidden="true">
+                      <i data-lucide="image-plus"></i>
+                    </span>
+                    <span class="upload-copy">
+                      <strong>添加首帧参考图</strong>
+                      <span>用于控制视频起始画面</span>
+                    </span>
+                  </label>
+                  <div class="preview-row" id="videoReferencePreview" hidden>
+                    <img id="videoReferenceImage" alt="视频首帧预览" />
+                    <div class="preview-copy">
+                      <strong id="videoReferenceName">first-frame.png</strong>
+                      <span id="videoReferenceMeta">首帧生视频模式</span>
+                    </div>
+                    <button
+                      class="icon-button"
+                      id="clearVideoImageButton"
+                      type="button"
+                      title="移除首帧参考图"
+                      aria-label="移除首帧参考图"
+                    >
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="settings-block">
+                  <div class="field-label-row">
+                    <span class="group-label">视频设置</span>
+                    <span id="videoCapabilitySource">等待后端配置</span>
+                  </div>
+                  <div class="video-param-grid">
+                    <div class="field">
+                      <label for="videoModel">模型</label>
+                      <select id="videoModel" name="model" aria-label="视频模型" disabled>
+                        <option value="doubao-seedance-2-0-mini">Seedance 2.0 Mini</option>
+                      </select>
+                    </div>
+                    <fieldset class="field video-ratio-field">
+                      <legend>比例</legend>
+                      <div class="mini-segments" id="videoRatioSegments">
+                        <label><input type="radio" name="video_ratio" value="16:9" checked /><span>16:9</span></label>
+                        <label><input type="radio" name="video_ratio" value="9:16" /><span>9:16</span></label>
+                        <label><input type="radio" name="video_ratio" value="1:1" /><span>1:1</span></label>
+                      </div>
+                    </fieldset>
+                    <div class="field">
+                      <label for="videoResolution">清晰度</label>
+                      <select id="videoResolution" name="resolution" aria-label="视频清晰度">
+                        <option value="480p">480P</option>
+                        <option value="720p" selected>720P</option>
+                      </select>
+                    </div>
+                    <div class="field duration-field">
+                      <div class="field-label-row">
+                        <label for="videoDuration">时长</label>
+                        <output id="videoDurationValue" for="videoDuration">5 秒</output>
+                      </div>
+                      <input id="videoDuration" name="duration" type="range" min="4" max="15" value="5" />
+                    </div>
+                  </div>
+                  <label class="setting-toggle" for="videoAudio">
+                    <span>
+                      <strong>同步生成声音</strong>
+                      <small>由模型生成匹配画面的音效或语音</small>
+                    </span>
+                    <input id="videoAudio" name="generate_audio" type="checkbox" checked />
+                    <span class="toggle-track" aria-hidden="true"></span>
+                  </label>
+                </div>
+
+                <button class="primary-button" id="videoSubmitButton" type="submit" disabled>
+                  <i data-lucide="clapperboard" aria-hidden="true"></i>
+                  <span>生成视频</span>
+                </button>
+              </form>
+
+              <section class="result-panel" aria-live="polite">
+                <header class="result-header">
+                  <div class="panel-heading compact">
+                    <span class="section-index">02</span>
+                    <div>
+                      <p class="panel-kicker">预览</p>
+                      <h2>视频结果</h2>
+                    </div>
+                  </div>
+                  <a
+                    class="download-button"
+                    id="videoDownloadButton"
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    hidden
+                  >
+                    <i data-lucide="download" aria-hidden="true"></i>
+                    <span>打开原视频</span>
+                  </a>
+                </header>
+
+                <div class="result-stage video-result-stage" id="videoResultStage">
+                  <div class="empty-state" id="videoEmptyState">
+                    <span class="empty-icon" aria-hidden="true">
+                      <i data-lucide="clapperboard"></i>
+                    </span>
+                    <div>
+                      <strong>等待镜头</strong>
+                      <p>生成的视频会出现在这里</p>
+                    </div>
+                  </div>
+                  <div class="loading-state" id="videoLoadingState" hidden>
+                    <div class="motion-mark video-motion-mark" aria-hidden="true">
+                      <span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="loading-copy">
+                      <strong id="videoLoadingTitle">正在提交视频任务</strong>
+                      <p id="videoLoadingMeta">等待方舟接收任务</p>
+                    </div>
+                    <div class="progress-track" aria-hidden="true">
+                      <span id="videoProgressBar"></span>
+                    </div>
+                  </div>
+                  <video id="resultVideo" controls playsinline preload="metadata" hidden></video>
+                </div>
+
+                <div class="result-footer" id="videoResultFooter" hidden>
+                  <span id="videoResultModel">Seedance 2.0 Mini</span>
+                  <span id="videoResultRatio">16:9</span>
+                  <span id="videoResultDuration">5 秒</span>
+                </div>
+                <div class="message-box" id="videoMessageBox" role="alert" hidden></div>
+              </section>
+            </section>
+          </section>
+        </div>
       </main>
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/app.js?v=20260714-pages-align" type="module"></script>
+    <script src="/app.js?v=20260715-video-workspace" type="module"></script>
   </body>
 </html>

@@ -1,12 +1,12 @@
 # Image Studio
 
-Image Studio is a Cloudflare Pages image-generation workspace for `gpt-image-2`. It supports text-to-image, reference-image editing, API-detected size options, result preview, and original-image download.
+Image Studio is a Cloudflare Pages image and video generation workspace. It supports `gpt-image-2` text-to-image and reference-image editing, plus asynchronous Doubao Seedance 2.0 Mini text-to-video and first-frame-to-video tasks.
 
 The first screen is an interactive Three.js welcome scene. Selecting "开始创作" transitions into the image workspace without a page reload, and the workspace brand returns to the welcome scene.
 
 ## Architecture
 
-- The browser only calls `/api/capabilities` and `/api/generate-stream`.
+- The browser only calls same-origin `/api/` routes. Image generation uses `/api/generate-stream`; video generation creates an Ark task and polls `/api/video/tasks/:id`.
 - Three.js and Lucide are vendored under `public/vendor/`, so the interface has no runtime CDN dependency.
 - The upstream API key stays in Cloudflare Pages Secrets and is never sent to the browser.
 - The generation function sends an NDJSON heartbeat every 8 seconds so the browser receives visible progress.
@@ -30,7 +30,11 @@ Configure these encrypted Pages Secrets:
 IMAGE_API_BASE_URL=https://api.codeyu.shop
 IMAGE_API_KEY=your-server-side-key
 IMAGE_UPSTREAM_TIMEOUT_MS=600000
+ARK_API_KEY=your-volcengine-ark-key
+ARK_VIDEO_MODEL=doubao-seedance-2-0-mini
 ```
+
+`ARK_BASE_URL` is optional and defaults to `https://ark.cn-beijing.volces.com/api/v3`.
 
 `IMAGE_API_TRANSPORT=socket` is optional. The function selects socket transport automatically for `api.codeyu.shop`; set it explicitly only when overriding that behavior.
 
@@ -54,6 +58,8 @@ IMAGE_API_BASE_URL=https://api.codeyu.shop
 IMAGE_API_KEY=sk-your-server-side-key
 IMAGE_MODEL=gpt-image-2
 IMAGE_UPSTREAM_TIMEOUT_MS=600000
+ARK_API_KEY=ark-your-server-side-key
+ARK_VIDEO_MODEL=doubao-seedance-2-0-mini
 PORT=4173
 ```
 
