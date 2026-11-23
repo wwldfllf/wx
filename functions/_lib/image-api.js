@@ -1,6 +1,4 @@
-import { connect } from "cloudflare:sockets";
-
-export const IMAGE2_MODEL = "gpt-image-2";
+import { IMAGE26_MODEL, selectImageModel } from "./image-profile.js";
 
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 600000;
 const MAX_SOCKET_RESPONSE_BYTES = 50 * 1024 * 1024;
@@ -25,7 +23,7 @@ export function getConfig(env) {
   return {
     apiBaseUrl,
     apiKey: env.IMAGE_API_KEY || "",
-    defaultModel: IMAGE2_MODEL,
+    defaultModel: selectImageModel(apiBaseUrl, env.IMAGE_MODEL),
     configuredModel: env.IMAGE_MODEL || "",
     configuredUpstreamTimeoutMs: env.IMAGE_UPSTREAM_TIMEOUT_MS || "",
     upstreamTimeoutMs: parseTimeoutMs(env.IMAGE_UPSTREAM_TIMEOUT_MS),
@@ -47,94 +45,9 @@ export function assertConfigured(config) {
   return null;
 }
 
-export function fallbackCapabilities(defaultModel) {
-  return {
-    models: [createModelCapabilities(defaultModel)],
-    defaultModel,
-    source: "fallback"
-  };
-}
-
-export async function fetchModels(config) {
-  const response = await apiFetch(config, "/v1/models", {
-    method: "GET"
-  });
-  const body = await readJson(response);
-
-  if (!response.ok) {
-    throw createApiError(response, body, "Could not detect model list from upstream API.");
-  }
-
-  return Array.isArray(body.data) ? body.data : [];
-}
-
-export function isLikelyImageModel(modelId) {
-  const id = String(modelId || "").toLowerCase();
-  return (
-    id.includes("image") ||
-    id.includes("dall") ||
-    id.includes("flux") ||
-    id.includes("sd") ||
-    id.includes("midjourney")
-  );
-}
-
-export function createModelCapabilities(id) {
-  const lower = String(id || "").toLowerCase();
-  const isGptImage = lower.includes("gpt-image");
-  const isGptImage2 = lower.includes("gpt-image-2");
-
-  if (isGptImage2) {
-    return {
-      id,
-      label: id,
-      sizes: ["1024x1024", "1536x1024", "1024x1536"],
-      qualities: ["gateway-default"],
-      formats: ["png"],
-      modes: ["text", "image"]
-    };
-  }
-
-  if (isGptImage) {
-    return {
-      id,
-      label: id,
-      sizes: ["1024x1024", "1024x1536", "1536x1024", "auto"],
-      qualities: ["auto", "low", "medium", "high"],
-      formats: ["png", "jpeg", "webp"],
-      modes: ["text", "image"]
-    };
-  }
-
-  return {
-    id,
-    label: id,
-    sizes: ["1024x1024", "1024x1792", "1792x1024", "auto"],
-    qualities: ["standard", "hd", "auto"],
-    formats: ["png", "jpeg", "webp"],
-    modes: ["text", "image"]
-  };
-}
-
 export async function createImage(config, { model, prompt, size, quality, outputFormat }) {
-  const payload = isGptImage2Model(model)
-    ? compactObject({
-        model,
-        prompt,
-        size: normalizeGptImage2Size(size)
-      })
-    : compactObject({
-        model,
-        prompt,
-        size,
-        quality,
-        output_format: outputFormat,
-        n: 1
-      });
-
-  if (!isGptImageModel(model)) {
-    payload.response_format = "b64_json";
-  }
+  const payload = { model, prompt, size };
+  if (model === IMAGE26_MODEL) Object.assign(payload, { quality, output_format: outputFormat });
 
   const response = await apiFetch(config, "/v1/images/generations", {
     method: "POST",
@@ -156,14 +69,12 @@ export async function createImageEdit(config, { image, model, prompt, size, qual
   const form = new FormData();
   form.append("model", model);
   form.append("prompt", prompt);
-  form.append("size", isGptImage2Model(model) ? normalizeGptImage2Size(size) : size);
-
-  if (!isGptImage2Model(model)) {
-    appendOptionalFormValue(form, "quality", quality);
-    appendOptionalFormValue(form, "output_format", outputFormat);
+  form.append("size", size);
+  if (model === IMAGE26_MODEL) {
+    form.append("quality", quality);
+    form.append("output_format", outputFormat);
   }
-
-  form.append(isGptImage2Model(model) ? "image[]" : "image", image, image.name || "reference.png");
+  form.append("image[]", image, image.name || "reference.png");
 
   const response = await apiFetch(config, "/v1/images/edits", {
     method: "POST",
@@ -178,57 +89,29 @@ export async function createImageEdit(config, { image, model, prompt, size, qual
   return body;
 }
 
-export function normalizeImageResults(result, requestedFormat) {
-  const data = Array.isArray(result?.data) ? result.data : [];
-  const images = [];
-
-  for (const item of data) {
-    if (!item) continue;
-
-    if (item.b64_json) {
-      images.push({
-        src: toDataUrl(item.b64_json, item.output_format || requestedFormat),
-        mimeType: mimeTypeFor(item.output_format || requestedFormat),
-        revisedPrompt: item.revised_prompt || ""
-      });
-      continue;
+export function normalizeImageResults(result) {
+  const items = Array.isArray(result?.data) ? [...result.data] : [];
+  if (result?.b64_json || result?.url) items.push(result);
+  return items.flatMap((item) => {
+    const revisedPrompt = item?.revised_prompt || "";
+    const value = typeof item === "string" ? item : item?.b64_json;
+    if (typeof value === "string" && value) {
+      const encoded = value.replace(/^data:image\/(?:png|jpeg|webp);base64,/i, "");
+      if (!/^[A-Za-z0-9+/]/.test(encoded)) return [];
+      let mimeType;
+      try {
+        const bytes = atob(encoded.slice(0, 16));
+        if (bytes.startsWith("\x89PNG\r\n\x1a\n")) mimeType = "image/png";
+        else if (bytes.startsWith("\xff\xd8\xff")) mimeType = "image/jpeg";
+        else if (bytes.startsWith("RIFF") && bytes.slice(8, 12) === "WEBP") mimeType = "image/webp";
+      } catch { return []; }
+      return mimeType ? [{ src: `data:${mimeType};base64,${encoded}`, mimeType, revisedPrompt }] : [];
     }
-
-    if (item.url) {
-      images.push({
-        src: item.url,
-        mimeType: mimeTypeFor(requestedFormat),
-        revisedPrompt: item.revised_prompt || ""
-      });
-      continue;
+    if (typeof item?.url === "string" && /^https:\/\//i.test(item.url)) {
+      return [{ src: item.url, mimeType: "", revisedPrompt }];
     }
-
-    if (typeof item === "string") {
-      images.push({
-        src: item.startsWith("data:") ? item : toDataUrl(item, requestedFormat),
-        mimeType: mimeTypeFor(requestedFormat),
-        revisedPrompt: ""
-      });
-    }
-  }
-
-  if (result?.b64_json) {
-    images.push({
-      src: toDataUrl(result.b64_json, requestedFormat),
-      mimeType: mimeTypeFor(requestedFormat),
-      revisedPrompt: result.revised_prompt || ""
-    });
-  }
-
-  if (result?.url) {
-    images.push({
-      src: result.url,
-      mimeType: mimeTypeFor(requestedFormat),
-      revisedPrompt: result.revised_prompt || ""
-    });
-  }
-
-  return images;
+    return [];
+  });
 }
 
 function normalizeBaseUrl(value) {
@@ -270,23 +153,6 @@ function appendOptionalFormValue(form, key, value) {
   }
 }
 
-function isGptImageModel(model) {
-  return String(model || "")
-    .toLowerCase()
-    .includes("gpt-image");
-}
-
-function isGptImage2Model(model) {
-  return String(model || "")
-    .toLowerCase()
-    .includes("gpt-image-2");
-}
-
-function normalizeGptImage2Size(size) {
-  const allowedSizes = new Set(["1024x1024", "1536x1024", "1024x1536"]);
-  return allowedSizes.has(size) ? size : "1024x1024";
-}
-
 async function apiFetch(config, endpoint, options) {
   const timeoutMs = config.upstreamTimeoutMs || DEFAULT_UPSTREAM_TIMEOUT_MS;
   const startedAt = Date.now();
@@ -307,6 +173,7 @@ async function apiFetch(config, endpoint, options) {
   try {
     const response = await fetch(`${config.apiBaseUrl}${endpoint}`, {
       ...requestOptions,
+      redirect: "error",
       signal: controller.signal,
       headers
     });
@@ -348,6 +215,7 @@ async function apiSocketFetch(config, endpoint, options, startedAt, timeoutMs) {
     const body = await serializeSocketBody(options.body, headers);
     const request = buildHttpRequest(url, options.method || "GET", headers, body);
 
+    const { connect } = await import("cloudflare:sockets");
     socket = connect(
       {
         hostname: url.hostname,
@@ -688,16 +556,4 @@ function summarizeErrorDetails(body) {
   }
 
   return body;
-}
-
-function toDataUrl(value, format) {
-  if (value.startsWith("data:")) return value;
-  return `data:${mimeTypeFor(format)};base64,${value}`;
-}
-
-function mimeTypeFor(format) {
-  const normalized = String(format || "png").replace("jpg", "jpeg").toLowerCase();
-  if (normalized === "webp") return "image/webp";
-  if (normalized === "jpeg") return "image/jpeg";
-  return "image/png";
 }

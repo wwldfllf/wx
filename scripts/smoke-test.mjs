@@ -1,12 +1,12 @@
 const baseUrl = process.env.SMOKE_BASE_URL || "http://localhost:4173";
 
-const [home, styles, app, referenceHero, capabilities, videoCapabilities] = await Promise.all([
+const [home, styles, app, referenceHero, capabilities, videoResponse] = await Promise.all([
   readText(`${baseUrl}/`),
   readText(`${baseUrl}/styles.css`),
   readText(`${baseUrl}/app.js`),
   readBytes(`${baseUrl}/assets/reference-dream-gallery.jpg`),
   readJson(`${baseUrl}/api/capabilities`),
-  readJson(`${baseUrl}/api/video/capabilities`)
+  fetch(`${baseUrl}/api/video/capabilities`)
 ]);
 
 const checks = {
@@ -26,9 +26,9 @@ const checks = {
   hasNoWelcomeDialog:
     !home.includes('id="welcomeQuickForm"') && !home.includes('id="welcomePrompt"'),
   hasChineseWelcome:
-    home.includes("让每一种想象") &&
+    home.includes("从一句构想到一张图") &&
     home.includes("开始创作") &&
-    home.includes("智能创作引擎"),
+    home.includes("电影场景"),
   hasStudioScene: home.includes('id="studioExperience"'),
   hasNoApiKeyInput: !home.includes('id="apiKey"') && !home.includes('name="api_key"'),
   hasPrompt: home.includes('id="prompt"'),
@@ -38,14 +38,13 @@ const checks = {
     home.includes('id="sizeMenuButton"') &&
     home.includes('id="sizeMenuList"') &&
     app.includes("renderSizeMenu"),
-  hasVideoWorkspace:
-    home.includes('id="videoPlatformPane"') &&
-    home.includes('id="videoGenerateForm"') &&
-    home.includes('id="resultVideo"') &&
-    home.includes('id="videoSubmitButton"'),
+  hasImageOnlyUI: /id="platformSwitch" hidden inert/.test(home) && !app.includes('loadCapabilities(), loadVideoCapabilities()'),
+  hasCustomSize: home.includes('id="customDimensions"') && home.includes('id="customWidth"') && home.includes('id="customHeight"'),
+  hasThemePicker: (home.match(/data-theme-picker/g) || []).length === 2 && styles.includes('data-theme="dark"'),
+  hasStarterCases: (home.match(/data-prompt-preset=/g) || []).length >= 6,
   hasVersionedAssets:
-    home.includes("app.js?v=20260715-video-workspace") &&
-    home.includes("styles.css?v=20260715-video-workspace") &&
+    home.includes("app.js?v=20261123-image26") &&
+    home.includes("styles.css?v=20261123-image26") &&
     !home.includes("welcome-scene.js"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
   hasSlowTransitions:
@@ -53,18 +52,16 @@ const checks = {
     app.includes("PLATFORM_TRANSITION_MS = 900") &&
     styles.includes("welcome-curtain 1500ms"),
   usesBackendStream: app.includes('fetch("/api/generate-stream"'),
-  usesVideoBackend:
-    app.includes('fetch("/api/video/generate"') && app.includes("/api/video/tasks/"),
   hasNoPublicUpstream:
     !app.includes("api.codeyu.shop") &&
     !app.includes("ark.cn-beijing.volces.com") &&
     !app.includes("Authorization"),
   defaultModel: capabilities.defaultModel,
   models: capabilities.models?.map((model) => model.id) || [],
-  image2Sizes: capabilities.models?.find((model) => model.id === "gpt-image-2")?.sizes || [],
-  videoModel: videoCapabilities.model?.id || "",
-  videoConfigured: Boolean(videoCapabilities.configured),
-  videoResolutions: videoCapabilities.resolutions || []
+  imageSizes: capabilities.models?.[0]?.sizes || [],
+  formats: capabilities.models?.[0]?.formats || [],
+  customSize: capabilities.models?.[0]?.customSize || null,
+  videoStatus: videoResponse.status
 };
 
 if (
@@ -81,7 +78,7 @@ if (
   !checks.hasUpload ||
   !checks.hasResultStage ||
   !checks.hasCustomSizeMenu ||
-  !checks.hasVideoWorkspace
+  !checks.hasImageOnlyUI || !checks.hasCustomSize || !checks.hasThemePicker || !checks.hasStarterCases
 ) {
   throw new Error("首页缺少关键 UI 节点。");
 }
@@ -98,24 +95,17 @@ if (!checks.hasSlowTransitions) {
   throw new Error("欢迎页或平台切换动画时序没有更新。");
 }
 
-if (!checks.usesBackendStream || !checks.usesVideoBackend || !checks.hasNoPublicUpstream) {
+if (!checks.usesBackendStream || !checks.hasNoPublicUpstream) {
   throw new Error("前端没有使用安全的后端流式生成通道。");
 }
 
-if (!checks.videoModel.includes("seedance-2-0-mini")) {
-  throw new Error("视频能力探测没有返回 Seedance 2.0 Mini。");
+if (checks.videoStatus !== 404) throw new Error("视频 API 未关闭。");
+if (!checks.models.includes(checks.defaultModel) || !checks.imageSizes.includes("1536x1024")) {
+  throw new Error("图片模型配置无效。");
 }
-
-if (!checks.videoResolutions.includes("480p") || !checks.videoResolutions.includes("720p")) {
-  throw new Error("视频能力探测缺少 mini 支持的清晰度。");
-}
-
-if (!checks.models.includes("gpt-image-2")) {
-  throw new Error("能力探测没有返回 gpt-image-2。");
-}
-
-if (!checks.image2Sizes.includes("1536x1024") || checks.image2Sizes.includes("auto")) {
-  throw new Error("gpt-image-2 尺寸选项没有按网关教程配置。");
+if (!["png", "jpeg", "webp"].every((f) => checks.formats.includes(f))) throw new Error("下载格式不完整。");
+if (checks.defaultModel === "gpt-image-2.6" && (!checks.customSize || !checks.imageSizes.includes("1024x768"))) {
+  throw new Error("2.6 自定义尺寸或常用比例未开放。");
 }
 
 console.log(JSON.stringify(checks, null, 2));

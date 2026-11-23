@@ -1,3 +1,5 @@
+import { exportImage } from "./image-export.js?v=20261123-image26";
+
 const GENERATION_TIMEOUT_MS = 630000;
 const DEFAULT_SERVER_TIMEOUT_MS = 600000;
 const CAPABILITY_TIMEOUT_MS = 30000;
@@ -27,6 +29,11 @@ const FALLBACK_CAPABILITIES = {
 
 const SIZE_LABELS = {
   auto: "自动比例",
+  custom: "自定义宽高…",
+  "1024x768": "横向 · 4:3",
+  "768x1024": "纵向 · 3:4",
+  "1280x1024": "横向 · 5:4",
+  "1024x1280": "纵向 · 4:5",
   "1024x1024": "正方形 · 1:1",
   "1024x1536": "纵向 · 2:3",
   "1536x1024": "横向 · 3:2",
@@ -43,9 +50,9 @@ const SIZE_LABELS = {
 const QUALITY_LABELS = {
   auto: "自动",
   "gateway-default": "智能匹配",
-  low: "快速",
-  medium: "标准",
-  high: "精细",
+  low: "低 · 快速",
+  medium: "中 · 标准",
+  high: "高 · 精细",
   standard: "标准",
   hd: "高清"
 };
@@ -110,6 +117,11 @@ const elements = {
   sizeMenuList: document.querySelector("#sizeMenuList"),
   quality: document.querySelector("#quality"),
   outputFormat: document.querySelector("#outputFormat"),
+  customDimensions: document.querySelector("#customDimensions"),
+  customWidth: document.querySelector("#customWidth"),
+  customHeight: document.querySelector("#customHeight"),
+  customSizeHint: document.querySelector("#customSizeHint"),
+  qualityHint: document.querySelector("#qualityHint"),
   imageInput: document.querySelector("#imageInput"),
   uploadZone: document.querySelector("#uploadZone"),
   clearImageButton: document.querySelector("#clearImageButton"),
@@ -171,6 +183,7 @@ const elements = {
 init();
 
 async function init() {
+  initializeTheme();
   window.lucide?.createIcons?.();
   initializeExperience();
   bindEvents();
@@ -180,7 +193,29 @@ async function init() {
   renderCapabilities(FALLBACK_CAPABILITIES);
   setStageRatio(elements.size.value || "1024x1024");
   setVideoStageRatio(selectedVideoRatio());
-  await Promise.all([loadCapabilities(), loadVideoCapabilities()]);
+  await loadCapabilities();
+}
+
+function initializeTheme() {
+  const media = matchMedia("(prefers-color-scheme: dark)");
+  const controls = [...document.querySelectorAll("[data-theme-picker]")];
+  const storageKey = "image-studio-theme";
+  let preference = "system";
+  try { preference = localStorage.getItem(storageKey) || "system"; } catch {}
+  if (!["system", "light", "dark"].includes(preference)) preference = "system";
+  const apply = () => {
+    const dark = preference === "dark" || (preference === "system" && media.matches);
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    document.querySelector('meta[name="theme-color"]').content = dark ? "#151625" : "#f5f5f7";
+    controls.forEach((control) => { control.value = preference; });
+  };
+  controls.forEach((control) => control.addEventListener("change", () => {
+    preference = control.value;
+    try { localStorage.setItem(storageKey, preference); } catch {}
+    apply();
+  }));
+  media.addEventListener("change", apply);
+  apply();
 }
 
 function bindEvents() {
@@ -252,10 +287,15 @@ function bindEvents() {
     renderParameterOptions(getSelectedModel());
   });
 
-  elements.size.addEventListener("change", () => {
-    setStageRatio(elements.size.value);
-    syncSizeMenuSelection();
-  });
+  elements.size.addEventListener("change", updateDimensionsUI);
+  for (const input of [elements.customWidth, elements.customHeight]) {
+    input.addEventListener("input", () => {
+      updateDimensionsUI();
+      if (!elements.messageBox.hidden) hideMessage();
+    });
+  }
+  elements.outputFormat.addEventListener("change", updateDownloadLabel);
+  elements.downloadButton.addEventListener("click", downloadImage);
 
   elements.imageInput.addEventListener("change", () => {
     const file = elements.imageInput.files?.[0];
@@ -340,6 +380,7 @@ function bindEvents() {
 
 function switchPlatform(platform) {
   if (
+    elements.platformSwitch.hidden ||
     !["image", "video"].includes(platform) ||
     platform === state.activePlatform ||
     state.platformSwitching
@@ -477,12 +518,15 @@ function selectSizeOption(value) {
   if (!Array.from(elements.size.options).some((option) => option.value === value)) return;
   elements.size.value = value;
   elements.size.dispatchEvent(new Event("change", { bubbles: true }));
-  closeSizeMenu({ returnFocus: true });
+  closeSizeMenu({ returnFocus: value !== "custom" });
+  if (value === "custom") elements.customWidth.focus({ preventScroll: true });
 }
 
 function syncSizeMenuSelection() {
   const selected = elements.size.selectedOptions[0];
-  elements.sizeMenuValue.textContent = selected?.textContent || SIZE_LABELS[elements.size.value] || "选择比例";
+  elements.sizeMenuValue.textContent = elements.size.value === "custom" && selectedSize()
+    ? `自定义 · ${selectedSize().replace("x", " × ")}`
+    : selected?.textContent || "选择比例";
   const optionButtons = Array.from(elements.sizeMenuList.querySelectorAll(".glass-select-option"));
   optionButtons.forEach((button, index) => {
     const active = button.dataset.value === elements.size.value;
@@ -721,7 +765,7 @@ async function loadCapabilities() {
 
     state.backendReady = true;
     renderCapabilities(body);
-    elements.capabilitySource.textContent = "服务实时探测";
+    elements.capabilitySource.textContent = "当前模型配置";
     elements.submitButton.disabled = false;
     if (state.activePlatform === "image") setStatus("ready", "图片服务已连接");
   } catch (error) {
@@ -825,11 +869,42 @@ function renderModels(models, defaultModel) {
 }
 
 function renderParameterOptions(model) {
-  fillSelect(elements.size, model?.sizes || ["1024x1024"], SIZE_LABELS);
+  const sizes = model?.sizes || ["1024x1024"];
+  fillSelect(elements.size, model?.customSize ? [...sizes, "custom"] : sizes, SIZE_LABELS);
   fillSelect(elements.quality, model?.qualities || ["gateway-default"], QUALITY_LABELS);
   fillSelect(elements.outputFormat, model?.formats || ["png"], FORMAT_LABELS);
   renderSizeMenu();
-  setStageRatio(elements.size.value);
+  updateDimensionsUI();
+  updateDownloadLabel();
+  elements.qualityHint.hidden = !model?.customSize;
+}
+
+function selectedSize() {
+  if (elements.size.value !== "custom") return elements.size.value;
+  const limits = getSelectedModel()?.customSize;
+  if (!limits) return "";
+  const width = elements.customWidth.valueAsNumber;
+  const height = elements.customHeight.valueAsNumber;
+  return [width, height].every((value) => Number.isInteger(value) && value >= limits.min && value <= limits.max && value % limits.step === 0) &&
+    width * height >= limits.minPixels && Math.max(width, height) <= Math.min(width, height) * limits.maxRatio
+    ? `${width}x${height}` : "";
+}
+
+function updateDimensionsUI() {
+  const limits = getSelectedModel()?.customSize;
+  const active = elements.size.value === "custom" && Boolean(limits);
+  elements.customDimensions.hidden = elements.customDimensions.disabled = !active;
+  if (active) {
+    for (const input of [elements.customWidth, elements.customHeight]) {
+      input.min = limits.min;
+      input.max = limits.max;
+      input.step = limits.step;
+    }
+    elements.customSizeHint.textContent = `${limits.min}–${limits.max} px，宽高均为 ${limits.step} 的倍数；至少 ${limits.minPixels.toLocaleString("zh-CN")} 像素，长短边之比不超过 ${limits.maxRatio}:1。`;
+  }
+  syncSizeMenuSelection();
+  const size = selectedSize();
+  if (size && !state.lastResult) setStageRatio(size);
 }
 
 function fillSelect(select, values, labels) {
@@ -853,7 +928,8 @@ function getSelectedModel() {
 
 function modelDisplayName(model) {
   if (model.label && model.label !== model.id) return model.label;
-  if (String(model.id).toLowerCase() === "gpt-image-2") return "GPT Image 2";
+  if (model.id === "gpt-image-2.6") return "GPT Image 2.6";
+  if (model.id === "gpt-image-2") return "GPT Image 2";
   return model.id;
 }
 
@@ -1170,6 +1246,13 @@ async function generateImage() {
     return;
   }
 
+  const size = selectedSize();
+  if (!size) {
+    showMessage(`尺寸不符合要求。${elements.customSizeHint.textContent}`, "error");
+    elements.customWidth.focus();
+    return;
+  }
+  setStageRatio(size);
   state.generationController?.abort();
   const controller = new AbortController();
   state.generationController = controller;
@@ -1180,7 +1263,7 @@ async function generateImage() {
   const formData = new FormData();
   formData.append("prompt", prompt);
   formData.append("model", elements.model.value);
-  formData.append("size", elements.size.value);
+  formData.append("size", size);
   formData.append("quality", elements.quality.value);
   formData.append("output_format", elements.outputFormat.value);
   if (state.selectedImage) {
@@ -1332,13 +1415,18 @@ function showResult(result, elapsedMs) {
   state.lastResult = {
     src: image.src,
     model: result.model || elements.model.value,
-    size: elements.size.value,
-    format: elements.outputFormat.value,
+    size: result.size || selectedSize(),
     elapsedMs
   };
 
   elements.resultImage.classList.remove("reveal");
   elements.resultImage.onload = () => {
+    const { naturalWidth, naturalHeight } = elements.resultImage;
+    if (naturalWidth && naturalHeight) {
+      const size = `${naturalWidth}x${naturalHeight}`;
+      setStageRatio(size);
+      elements.resultSize.textContent = `${naturalWidth} × ${naturalHeight}`;
+    }
     requestAnimationFrame(() => elements.resultImage.classList.add("reveal"));
   };
   elements.resultImage.src = image.src;
@@ -1349,8 +1437,7 @@ function showResult(result, elapsedMs) {
   elements.emptyState.hidden = true;
   elements.loadingState.hidden = true;
 
-  elements.downloadButton.href = image.src;
-  elements.downloadButton.download = createDownloadName(elements.outputFormat.value);
+  updateDownloadLabel();
   elements.downloadButton.hidden = false;
 
   elements.resultModel.textContent = modelDisplayName({ id: state.lastResult.model });
@@ -1360,6 +1447,32 @@ function showResult(result, elapsedMs) {
 
   if (image.revisedPrompt) {
     showMessage(`优化后的画面描述：${image.revisedPrompt}`);
+  }
+}
+
+function updateDownloadLabel() {
+  const format = FORMAT_LABELS[elements.outputFormat.value] || "PNG";
+  elements.downloadButton.querySelector("span").textContent = `下载 ${format}`;
+}
+
+async function downloadImage() {
+  if (!state.lastResult) return;
+  const format = elements.outputFormat.value || "png";
+  elements.downloadButton.disabled = true;
+  try {
+    const blob = await exportImage(state.lastResult.src, format);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = createDownloadName(format);
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch {
+    showMessage("无法读取或转换源图。若图片仍可预览，可长按或右键保存原始格式。", "error");
+  } finally {
+    elements.downloadButton.disabled = false;
   }
 }
 
@@ -1379,6 +1492,8 @@ function setLoading(isLoading) {
   }
 
   if (state.lastResult) {
+    const { naturalWidth, naturalHeight } = elements.resultImage;
+    setStageRatio(naturalWidth && naturalHeight ? `${naturalWidth}x${naturalHeight}` : state.lastResult.size);
     elements.resultImage.hidden = false;
     elements.emptyState.hidden = true;
     elements.downloadButton.hidden = false;

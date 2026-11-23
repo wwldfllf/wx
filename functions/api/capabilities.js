@@ -1,19 +1,11 @@
-import {
-  assertConfigured,
-  createModelCapabilities,
-  getConfig,
-  IMAGE2_MODEL,
-  json
-} from "../_lib/image-api.js";
+import { createModelCapabilities } from "../_lib/image-profile.js";
+import { assertConfigured, getConfig, json } from "../_lib/image-api.js";
 
-export async function onRequestGet({ env }) {
+export function onRequestGet({ env }) {
   const config = getConfig(env);
-  const configError = assertConfigured(config);
-  if (configError) return configError;
-
-  return json({
-    models: [createModelCapabilities(IMAGE2_MODEL)],
-    defaultModel: IMAGE2_MODEL,
-    source: "image2-docs"
+  return assertConfigured(config) || json({
+    models: [createModelCapabilities(config.defaultModel)],
+    defaultModel: config.defaultModel,
+    source: "provider-profile"
   });
 }

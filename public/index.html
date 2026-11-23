@@ -6,10 +6,18 @@
     <meta name="theme-color" content="#f5f5f7" />
     <meta
       name="description"
-      content="灵感画室 - 使用 GPT Image 2 进行文生图与参考图创作。"
+      content="灵感画室：从示例提示词出发，生成或编辑图像，按所需尺寸和格式下载。"
     />
     <title>灵感画室</title>
-    <link rel="stylesheet" href="/styles.css?v=20260715-video-workspace" />
+    <script>
+      (() => {
+        let choice;
+        try { choice = localStorage.getItem("image-studio-theme"); } catch {}
+        const dark = choice === "dark" || (choice !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
+    <link rel="stylesheet" href="/styles.css?v=20261123-image26" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -29,6 +37,14 @@
             <button type="button" data-welcome-page="pricing">方案</button>
             <button type="button" data-welcome-page="about">关于</button>
           </div>
+          <label class="theme-picker">
+            <i data-lucide="sun-moon" aria-hidden="true"></i>
+            <select aria-label="页面主题" data-theme-picker>
+              <option value="system">跟随系统</option>
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+            </select>
+          </label>
         </nav>
 
         <div class="welcome-pages">
@@ -40,12 +56,11 @@
           >
             <div class="welcome-copy">
               <h1 id="welcomeTitle">
-                让每一种想象<br />
-                都成为 <span>画面</span>
+                从一句构想到一张图<br />
+                让 <span>细节</span> 说话
               </h1>
               <p class="welcome-statement">
-                灵感画室是你的智能创意伙伴。<br />
-                几秒钟内，让每一个想法清晰呈现。
+                可以从零描述一幕，也可以上传参考图，只改你想改的地方。
               </p>
             </div>
 
@@ -60,19 +75,16 @@
               <i data-lucide="arrow-right" aria-hidden="true"></i>
             </button>
 
-            <div class="welcome-benefits" aria-label="服务特点">
-              <div>
-                <i data-lucide="sparkles" aria-hidden="true"></i>
-                <span>智能创作引擎</span>
-              </div>
-              <div>
-                <i data-lucide="image" aria-hidden="true"></i>
-                <span>高清图片输出</span>
-              </div>
-              <div>
-                <i data-lucide="lock-keyhole" aria-hidden="true"></i>
-                <span>隐私安全保障</span>
-              </div>
+            <div class="welcome-benefits welcome-starters" aria-label="把示例带入工作台">
+              <button type="button" data-prompt-preset="编辑摄影：透明香水瓶立于磨砂玻璃台座，冷白侧光勾出瓶肩，淡紫投影落向右下；竖幅，主体下移，画面上方留三分之一排版空间，不生成文字。">
+                <i data-lucide="box" aria-hidden="true"></i><span>产品静物</span>
+              </button>
+              <button type="button" data-prompt-preset="独立建筑杂志封面底图，极简玻璃回廊朝画面中央消失，银灰雾面地板与薰衣草色漫反射；竖幅，顶部留干净刊头区，不出现标志或文字。">
+                <i data-lucide="book-open" aria-hidden="true"></i><span>杂志封面</span>
+              </button>
+              <button type="button" data-prompt-preset="科幻长片的开场镜头：粉紫暮色落在盐湖上，远处一颗巨大的淡紫色星球，静止水面压低地平线；21 世纪电影摄影，轻微银盐颗粒，宁静不艳丽，无文字。">
+                <i data-lucide="clapperboard" aria-hidden="true"></i><span>电影场景</span>
+              </button>
             </div>
           </section>
 
@@ -87,41 +99,41 @@
             <div class="welcome-page-shell">
               <header class="welcome-page-heading">
                 <p>灵感探索</p>
-                <h1 id="exploreTitle">从一个画面开始</h1>
-                <span>选择灵感方向，提示词会自动带入创作工作区。</span>
+                <h1 id="exploreTitle">一张图，先定一个镜头</h1>
+                <span>从构图、材质和光线出发。选一张案例，把提示词带进工作台，再替换成你的主体。</span>
               </header>
               <div class="inspiration-grid">
                 <button
                   class="inspiration-item"
                   type="button"
-                  data-prompt-preset="清晨的玻璃宫殿漂浮在云海上，柔和日光，通透材质，电影级构图，细腻真实"
+                  data-prompt-preset="云海上方的玻璃度假酒店，建筑主入口靠左，画面右侧保留大片云海用于排版。相机略低俯仰，早晨漫射逆光透过玻璃墙，表现结构与玻璃边缘。横幅，冷灰蓝配色，无文字。"
                 >
                   <img src="/assets/work-cloud-window.jpg" alt="云海玻璃宫殿" />
-                  <span><strong>云海建筑</strong><small>通透、宁静、未来感</small></span>
+                  <span><strong>建筑品牌横幅</strong><small>偏心主体 · 右侧留白</small></span>
                 </button>
                 <button
                   class="inspiration-item"
                   type="button"
-                  data-prompt-preset="巨大的淡紫色星球悬浮在粉色雪山湖面上，梦境光线，超现实摄影，高细节"
+                  data-prompt-preset="科幻电影主视觉：一颗淡紫色行星从雪峰后升起，湖面只留一条薄亮反光。把地平线放在下三分之一，山峰用清晰剪影衬托星体；层次通透，控制饱和度，无文字。"
                 >
                   <img src="/assets/work-lavender-orbit.jpg" alt="淡紫色梦境星球" />
-                  <span><strong>梦境星球</strong><small>柔光、超现实、空灵</small></span>
+                  <span><strong>科幻电影主视觉</strong><small>低地平线 · 星体作为焦点</small></span>
                 </button>
                 <button
                   class="inspiration-item"
                   type="button"
-                  data-prompt-preset="冰蓝色山谷中的透明艺术展馆，云层穿过玻璃立面，清晨薄雾，建筑摄影"
+                  data-prompt-preset="城市建筑双页：透明展馆坐落于冰蓝山谷，45 度侧视让两面玻璃产生不同反射；薄雾只留在远景，窗框与石质基座保持清晰。清晨冷色，人物仅作尺度参照，无文字。"
                 >
                   <img src="/assets/work-ice-horizon.jpg" alt="冰蓝山谷与透明展馆" />
-                  <span><strong>冰境展馆</strong><small>冷静、建筑、高清</small></span>
+                  <span><strong>建筑杂志跨页</strong><small>45° 机位 · 冷暖与材质对照</small></span>
                 </button>
                 <button
                   class="inspiration-item"
                   type="button"
-                  data-prompt-preset="粉紫色天空下的镜面湖泊与远山，太阳从地平线升起，宁静唯美，宽幅风景"
+                  data-prompt-preset="香氛品牌故事背景，粉紫色清晨的镜面湖泊，远山压低，水面纹理朦胧。太阳放在左侧三分点，右上方保留干净色块，方便后期放标题。宽幅，阴影偏蓝，不出现文字或标记。"
                 >
                   <img src="/assets/work-pastel-lake.jpg" alt="粉紫色天空下的镜面湖泊" />
-                  <span><strong>粉彩湖面</strong><small>宽幅、唯美、治愈</small></span>
+                  <span><strong>香氛品牌背景</strong><small>柔光渐变 · 左侧三分构图</small></span>
                 </button>
               </div>
             </div>
@@ -194,7 +206,7 @@
                 <article class="plan-item featured">
                   <i data-lucide="image-upscale" aria-hidden="true"></i>
                   <h2>高清输出</h2>
-                  <p>支持多种画面比例，生成完成后可直接预览和下载原图。</p>
+                  <p>支持多种画面比例，生成完成后可直接预览，并选择 PNG、JPEG 或 WebP 下载。</p>
                   <strong>完整功能已包含</strong>
                 </article>
                 <article class="plan-item">
@@ -231,10 +243,10 @@
                 </div>
                 <div class="about-copy">
                   <h2>从描述到画面，只保留必要步骤</h2>
-                  <p>输入想法、选择比例和清晰度，需要时添加参考图，然后等待作品完成。生成结果会直接显示在页面中并支持原图下载。</p>
+                  <p>输入想法、选择比例和清晰度，需要时添加参考图，然后等待作品完成。生成结果会直接显示在页面中并支持下载为所选格式。</p>
                   <dl>
                     <div><dt>2 种</dt><dd>文生图与参考图模式</dd></div>
-                    <div><dt>3 种</dt><dd>常用画面比例</dd></div>
+                    <div><dt>3 种</dt><dd>PNG、JPEG、WebP 下载</dd></div>
                     <div><dt>10 分钟</dt><dd>长任务等待窗口</dd></div>
                   </dl>
                   <button class="content-cta align-start" type="button" data-enter-studio>
@@ -266,14 +278,24 @@
           <span>灵感画室</span>
         </a>
 
-        <div class="status-pill checking" id="statusPill" role="status">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span id="statusText">正在连接服务</span>
+        <div class="studio-top-actions">
+          <label class="theme-picker">
+            <i data-lucide="sun-moon" aria-hidden="true"></i>
+            <select aria-label="页面主题" data-theme-picker>
+              <option value="system">跟随系统</option>
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+            </select>
+          </label>
+          <div class="status-pill checking" id="statusPill" role="status">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="statusText">正在连接服务</span>
+          </div>
         </div>
       </header>
 
       <main class="app-shell">
-        <div class="platform-switch" id="platformSwitch" role="tablist" aria-label="生成平台">
+        <div class="platform-switch" id="platformSwitch" hidden inert role="tablist" aria-label="生成平台">
           <span class="platform-switch-indicator" aria-hidden="true"></span>
           <button
             class="active"
@@ -425,15 +447,22 @@
                 </div>
 
                 <div class="field">
-                  <label for="quality">清晰度</label>
-                  <select id="quality" name="quality" aria-label="清晰度"></select>
+                  <label for="quality">生成质量</label>
+                  <select id="quality" name="quality" aria-label="生成质量"></select>
                 </div>
 
                 <div class="field">
-                  <label for="outputFormat">格式</label>
-                  <select id="outputFormat" name="output_format" aria-label="输出格式"></select>
+                  <label for="outputFormat">下载格式</label>
+                  <select id="outputFormat" name="output_format" aria-label="下载格式"></select>
                 </div>
               </div>
+              <fieldset class="custom-dimensions" id="customDimensions" hidden disabled aria-describedby="customSizeHint">
+                <legend>自定义尺寸 · px</legend>
+                <label for="customWidth">宽<input id="customWidth" type="number" inputmode="numeric" value="1024" required /></label>
+                <label for="customHeight">高<input id="customHeight" type="number" inputmode="numeric" value="768" required /></label>
+                <p id="customSizeHint"></p>
+              </fieldset>
+              <p class="parameter-note" id="qualityHint" hidden>生成质量由供应商处理；像素尺寸由所选比例或自定义宽高决定。</p>
             </div>
 
             <button class="primary-button" id="submitButton" type="submit" disabled>
@@ -452,16 +481,15 @@
                 </div>
               </div>
 
-              <a
+              <button
                 class="download-button"
                 id="downloadButton"
-                href="#"
-                download="image-studio.png"
+                type="button"
                 hidden
               >
                 <i data-lucide="download" aria-hidden="true"></i>
-                <span>下载原图</span>
-              </a>
+                <span>下载图片</span>
+              </button>
             </header>
 
             <div class="result-stage" id="resultStage">
@@ -508,6 +536,7 @@
           <section
             class="platform-pane"
             id="videoPlatformPane"
+            hidden
             role="tabpanel"
             aria-labelledby="videoPlatformTab"
             aria-hidden="true"
@@ -697,6 +726,6 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/app.js?v=20260715-video-workspace" type="module"></script>
+    <script src="/app.js?v=20261123-image26" type="module"></script>
   </body>
 </html>

@@ -1,21 +1,18 @@
-# Image Studio
+# 灵感画室 · Image Studio
 
-Image Studio is a Cloudflare Pages image and video generation workspace. It supports `gpt-image-2` text-to-image and reference-image editing, plus asynchronous Doubao Seedance 2.0 Mini text-to-video and first-frame-to-video tasks.
+Cloudflare Pages image workspace with text-to-image and reference-image editing. Video is not public: both runtimes return `404` for video routes without creating upstream tasks. The video implementation remains in the repository for a future release.
 
-The first screen is an interactive Three.js welcome scene. Selecting "开始创作" transitions into the image workspace without a page reload, and the workspace brand returns to the welcome scene.
+## Image settings
 
-## Architecture
+- `gpt-image-2.6`: eleven ratio presets plus custom dimensions. This site's initial bounds are 512–2048 px per side, multiples of 16, at least 655,360 total pixels, and up to 2:1 between the long and short edges. These are app bounds, not a statement of the provider's full range.
+- The website passes through `auto`, `low`, `medium` and `high` quality on 2.6; the server does not claim the gateway applies a particular tier unless it reports it. Dimensions and quality are separate settings.
+- PNG, JPEG, and WebP downloads use the actual encoded bytes. If the gateway returns PNG despite a different request, the browser converts the returned image at the original dimensions. A remote source must permit CORS; if it does not, the site keeps the preview and explains how to save the original instead.
+- The former provider/model remain on a compatible three-size profile while changing production secrets. The capabilities endpoint advertises the configured profile, not a live probe on every page load.
+- Light, dark and system theme preferences apply to both the homepage and studio and are stored in the browser.
 
-- The browser only calls same-origin `/api/` routes. Image generation uses `/api/generate-stream`; video generation creates an Ark task and polls `/api/video/tasks/:id`.
-- Three.js and Lucide are vendored under `public/vendor/`, so the interface has no runtime CDN dependency.
-- The upstream API key stays in Cloudflare Pages Secrets and is never sent to the browser.
-- The generation function sends an NDJSON heartbeat every 8 seconds so the browser receives visible progress.
-- Requests to `api.codeyu.shop` use Cloudflare's outbound TLS socket transport instead of the normal Worker `fetch()` path.
-- The upstream timeout is 10 minutes. The browser allows another 30 seconds for the final response to arrive.
+## Cloudflare Pages production deployment
 
-## Cloudflare Pages
-
-Use these build settings:
+Connect the GitHub repository to a Pages project and select `main` as the production branch. Use these build settings:
 
 ```text
 Framework preset: None
@@ -24,61 +21,20 @@ Build output directory: public
 Root directory: /
 ```
 
-Configure these encrypted Pages Secrets:
+Set the project's **Production** variables and secrets separately from Git:
 
 ```text
-IMAGE_API_BASE_URL=https://api.codeyu.shop
-IMAGE_API_KEY=your-server-side-key
+IMAGE_API_BASE_URL=https://api.zyuou.com
+IMAGE_API_KEY=<private production secret>
+IMAGE_MODEL=gpt-image-2.6
+IMAGE_API_TRANSPORT=fetch
 IMAGE_UPSTREAM_TIMEOUT_MS=600000
-ARK_API_KEY=your-volcengine-ark-key
-ARK_VIDEO_MODEL=doubao-seedance-2-0-mini
 ```
 
-`ARK_BASE_URL` is optional and defaults to `https://ark.cn-beijing.volces.com/api/v3`.
+Do not commit a real API key. `IMAGE_API_TRANSPORT` may be left unset for the new provider; if an old value of `socket` is present, remove it or change it to `fetch`. With no explicit `IMAGE_MODEL`, the new endpoint selects 2.6 and the historical endpoint selects 2. Re-deploy after changing bindings and verify `/api/health` and `/api/capabilities`; configuration health is not a live generation test. The streaming route sends a heartbeat every eight seconds during generation.
 
-`IMAGE_API_TRANSPORT=socket` is optional. The function selects socket transport automatically for `api.codeyu.shop`; set it explicitly only when overriding that behavior.
+## Local development
 
-Do not put a real key in `public/`, GitHub Actions variables exposed to builds, or any client-side JavaScript.
+Copy `.env.example` to `.env`, set a server-side key and run `npm install` then `npm start` (http://localhost:4173). The Express runner shares image handlers with Pages. Use `npm run smoke` with the local server running; set `SMOKE_BASE_URL` to test another deployment. Run `node --test scripts/image-release.test.mjs` for mocked image and video-gate checks that do not consume a generation credit.
 
-## Local Development
-
-Install dependencies and start the Express development server:
-
-```bash
-npm install
-npm start
-```
-
-Then open `http://localhost:4173`.
-
-Create a local `.env` file based on `.env.example`:
-
-```env
-IMAGE_API_BASE_URL=https://api.codeyu.shop
-IMAGE_API_KEY=sk-your-server-side-key
-IMAGE_MODEL=gpt-image-2
-IMAGE_UPSTREAM_TIMEOUT_MS=600000
-ARK_API_KEY=ark-your-server-side-key
-ARK_VIDEO_MODEL=doubao-seedance-2-0-mini
-PORT=4173
-```
-
-Run the local smoke test while the server is running:
-
-```bash
-npm run smoke
-```
-
-## Python Gateway Test
-
-The Python script uses the same documented request shape and defaults to a 10-minute timeout:
-
-```bash
-python scripts/image2_gateway.py --prompt "a simple green icon on a white background" --size 1024x1024
-```
-
-For reference-image editing:
-
-```bash
-python scripts/image2_gateway.py --prompt "turn this into a watercolor poster" --size 1024x1024 --image path/to/input.png
-```
+`python scripts/image2_gateway.py` is the legacy command-line diagnostic; use the site or the shared handlers to exercise 2.6 custom settings.

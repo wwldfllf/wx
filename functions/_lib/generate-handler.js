@@ -1,56 +1,29 @@
-import {
-  IMAGE2_MODEL,
-  createImage,
-  createImageEdit,
-  normalizeImageResults
-} from "./image-api.js";
+import { createImage, createImageEdit, normalizeImageResults } from "./image-api.js";
+import { parseImageSettings } from "./image-profile.js";
 
 export async function generateFromRequest(request, config) {
-  const formData = await request.formData();
+  let formData;
+  try {
+    formData = await request.formData();
+  } catch {
+    throw Object.assign(new Error("无法读取生成表单。"), { status: 400 });
+  }
   return generateFromFormData(formData, config);
 }
 
 export async function generateFromFormData(formData, config) {
-  const prompt = String(formData.get("prompt") || "").trim();
-  const size = String(formData.get("size") || "1024x1024").trim();
-  const outputFormat = "png";
-  const image = formData.get("image");
-
-  if (!prompt) {
-    const error = new Error("Please enter an image prompt first.");
-    error.status = 400;
-    throw error;
-  }
-
-  const hasReferenceImage = image instanceof File && image.size > 0;
-  const result = hasReferenceImage
-    ? await createImageEdit(config, {
-        image,
-        model: IMAGE2_MODEL,
-        prompt,
-        size,
-        outputFormat
-      })
-    : await createImage(config, {
-        model: IMAGE2_MODEL,
-        prompt,
-        size,
-        outputFormat
-      });
-
-  const images = normalizeImageResults(result, outputFormat);
-
+  const settings = parseImageSettings(formData, config.defaultModel);
+  const result = await (settings.image ? createImageEdit(config, settings) : createImage(config, settings));
+  const images = normalizeImageResults(result);
   if (!images.length) {
-    const error = new Error("The image API responded but did not return a displayable image.");
-    error.status = 502;
-    error.details = result;
-    throw error;
+    throw Object.assign(new Error("上游没有返回可预览的图片。"), { status: 502 });
   }
-
   return {
     images,
-    model: IMAGE2_MODEL,
-    mode: hasReferenceImage ? "image" : "text",
+    model: settings.model,
+    size: settings.size,
+    requestedFormat: settings.outputFormat,
+    mode: settings.image ? "image" : "text",
     created: result.created || Date.now()
   };
 }
