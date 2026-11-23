@@ -1,10 +1,10 @@
 # 灵感画室 · Image Studio
 
-Cloudflare Pages image workspace with text-to-image and reference-image editing. Video is not public: both runtimes return `404` for video routes without creating upstream tasks. The video implementation remains in the repository for a future release.
+Cloudflare Pages image workspace with text-to-image and reference-image editing. The workbench shows a disabled video tab, clearly marked unavailable. Both runtimes return `404` for video routes without creating upstream tasks. The video implementation remains in the repository for a future release.
 
 ## Image settings
 
-- `gpt-image-2.6`: eleven ratio presets plus custom dimensions. This site's initial bounds are 512–2048 px per side, multiples of 16, at least 655,360 total pixels, and up to 2:1 between the long and short edges. These are app bounds, not a statement of the provider's full range.
+- `gpt-image-2.6`: eleven ratio presets, three exact-ratio pixel sizes for each preset, and custom dimensions. This site's initial bounds are 512–2048 px per side, multiples of 16, at least 655,360 total pixels, and up to 2:1 between the long and short edges. These are app bounds, not a statement of the provider's full range.
 - The website passes through `auto`, `low`, `medium` and `high` quality on 2.6; the server does not claim the gateway applies a particular tier unless it reports it. Dimensions and quality are separate settings.
 - PNG, JPEG, and WebP downloads use the actual encoded bytes. If the gateway returns PNG despite a different request, the browser converts the returned image at the original dimensions. A remote source must permit CORS; if it does not, the site keeps the preview and explains how to save the original instead.
 - The former provider/model remain on a compatible three-size profile while changing production secrets. The capabilities endpoint advertises the configured profile, not a live probe on every page load.
@@ -35,6 +35,6 @@ Do not commit a real API key. `IMAGE_API_TRANSPORT` may be left unset for the ne
 
 ## Local development
 
-Copy `.env.example` to `.env`, set a server-side key and run `npm install` then `npm start` (http://localhost:4173). The Express runner shares image handlers with Pages. Use `npm run smoke` with the local server running; set `SMOKE_BASE_URL` to test another deployment. Run `node --test scripts/image-release.test.mjs` for mocked image and video-gate checks that do not consume a generation credit.
+Copy `.env.example` to `.env`, set a server-side key and run `npm install` then `npm start` (http://localhost:4173). The Express runner shares image handlers with Pages. Use `npm run smoke` with the local server running; set `SMOKE_BASE_URL` to test another deployment. Run `node --test scripts/*.test.mjs` for pixel-size constraints and mocked image and video-gate checks that do not consume a generation credit.
 
 `python scripts/image2_gateway.py` is the legacy command-line diagnostic; use the site or the shared handlers to exercise 2.6 custom settings.

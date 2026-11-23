@@ -26,9 +26,9 @@ const checks = {
   hasNoWelcomeDialog:
     !home.includes('id="welcomeQuickForm"') && !home.includes('id="welcomePrompt"'),
   hasChineseWelcome:
-    home.includes("从一句构想到一张图") &&
+    home.includes("先构图，") &&
     home.includes("开始创作") &&
-    home.includes("电影场景"),
+    home.includes("电影静帧"),
   hasStudioScene: home.includes('id="studioExperience"'),
   hasNoApiKeyInput: !home.includes('id="apiKey"') && !home.includes('name="api_key"'),
   hasPrompt: home.includes('id="prompt"'),
@@ -37,14 +37,17 @@ const checks = {
   hasCustomSizeMenu:
     home.includes('id="sizeMenuButton"') &&
     home.includes('id="sizeMenuList"') &&
-    app.includes("renderSizeMenu"),
-  hasImageOnlyUI: /id="platformSwitch" hidden inert/.test(home) && !app.includes('loadCapabilities(), loadVideoCapabilities()'),
+    app.includes("const sizeMenu = createGlassMenu("),
+  hasVideoPreview: /id="videoPlatformTab"[\s\S]*?data-platform="video"\s+disabled/.test(home) && home.includes("暂未开放"),
+  hasSharedFormatMenu: home.includes('id="formatMenuList"') && app.includes("const formatMenu = createGlassMenu("),
+  hasResolution: home.includes('id="resolutionField"') && app.includes("resolutionPresets("),
+  hasEditorialHome: home.includes('id="studioCases"') && (home.match(/data-preset-size=/g) || []).length === 3,
   hasCustomSize: home.includes('id="customDimensions"') && home.includes('id="customWidth"') && home.includes('id="customHeight"'),
   hasThemePicker: (home.match(/data-theme-picker/g) || []).length === 2 && styles.includes('data-theme="dark"'),
   hasStarterCases: (home.match(/data-prompt-preset=/g) || []).length >= 6,
   hasVersionedAssets:
-    home.includes("app.js?v=20261123-image26") &&
-    home.includes("styles.css?v=20261123-image26") &&
+    home.includes("app.js?v=20261123-studio-editorial") &&
+    home.includes("styles.css?v=20261123-studio-editorial") &&
     !home.includes("welcome-scene.js"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
   hasSlowTransitions:
@@ -78,7 +81,8 @@ if (
   !checks.hasUpload ||
   !checks.hasResultStage ||
   !checks.hasCustomSizeMenu ||
-  !checks.hasImageOnlyUI || !checks.hasCustomSize || !checks.hasThemePicker || !checks.hasStarterCases
+  !checks.hasVideoPreview || !checks.hasSharedFormatMenu || !checks.hasResolution || !checks.hasEditorialHome ||
+  !checks.hasCustomSize || !checks.hasThemePicker || !checks.hasStarterCases
 ) {
   throw new Error("首页缺少关键 UI 节点。");
 }

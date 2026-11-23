@@ -1,4 +1,6 @@
 import { exportImage } from "./image-export.js?v=20261123-image26";
+import { createGlassMenu } from "./glass-menu.js?v=20261123-studio-editorial";
+import { resolutionPresets } from "./image-dimensions.js?v=20261123-studio-editorial";
 
 const GENERATION_TIMEOUT_MS = 630000;
 const DEFAULT_SERVER_TIMEOUT_MS = 600000;
@@ -77,8 +79,7 @@ const state = {
   welcomePage: "home",
   activePlatform: "image",
   platformSwitching: false,
-  sizeMenuOpen: false,
-  sizeMenuFocusIndex: 0,
+  pendingPresetSize: "",
   videoBackendReady: false,
   videoCapabilities: null,
   selectedVideoImage: null,
@@ -117,6 +118,13 @@ const elements = {
   sizeMenuList: document.querySelector("#sizeMenuList"),
   quality: document.querySelector("#quality"),
   outputFormat: document.querySelector("#outputFormat"),
+  formatMenu: document.querySelector("#formatMenu"),
+  formatMenuButton: document.querySelector("#formatMenuButton"),
+  formatMenuList: document.querySelector("#formatMenuList"),
+  formatMenuValue: document.querySelector("#formatMenuValue"),
+  resolution: document.querySelector("#resolution"),
+  resolutionField: document.querySelector("#resolutionField"),
+  legacySettingsHint: document.querySelector("#legacySettingsHint"),
   customDimensions: document.querySelector("#customDimensions"),
   customWidth: document.querySelector("#customWidth"),
   customHeight: document.querySelector("#customHeight"),
@@ -180,6 +188,45 @@ const elements = {
   videoMessageBox: document.querySelector("#videoMessageBox")
 };
 
+const sizeMenu = createGlassMenu({
+  root: elements.sizeMenu,
+  trigger: elements.sizeMenuButton,
+  list: elements.sizeMenuList,
+  select: elements.size,
+  value: elements.sizeMenuValue,
+  decorate(option) {
+    const shape = document.createElement("span");
+    shape.className = "ratio-shape";
+    shape.setAttribute("aria-hidden", "true");
+    const { width, height } = ratioShapeDimensions(option.value);
+    shape.style.setProperty("--ratio-width", `${width}px`);
+    shape.style.setProperty("--ratio-height", `${height}px`);
+    return shape;
+  },
+  summary(option) {
+    const size = option?.value === "custom" && selectedSize();
+    return size ? `自定义 · ${size.replace("x", " × ")}` : "";
+  },
+  onSelect(value) {
+    if (value === "custom") elements.customWidth.focus({ preventScroll: true });
+  }
+});
+
+const formatMenu = createGlassMenu({
+  root: elements.formatMenu,
+  trigger: elements.formatMenuButton,
+  list: elements.formatMenuList,
+  select: elements.outputFormat,
+  value: elements.formatMenuValue,
+  decorate(option) {
+    const icon = document.createElement("span");
+    icon.className = "format-shape";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = { png: "P", jpeg: "J", webp: "W" }[option.value] || "·";
+    return icon;
+  }
+});
+
 init();
 
 async function init() {
@@ -206,7 +253,7 @@ function initializeTheme() {
   const apply = () => {
     const dark = preference === "dark" || (preference === "system" && media.matches);
     document.documentElement.dataset.theme = dark ? "dark" : "light";
-    document.querySelector('meta[name="theme-color"]').content = dark ? "#151625" : "#f5f5f7";
+    document.querySelector('meta[name="theme-color"]').content = dark ? "#111214" : "#f5f5f7";
     controls.forEach((control) => { control.value = preference; });
   };
   controls.forEach((control) => control.addEventListener("change", () => {
@@ -225,11 +272,10 @@ function bindEvents() {
     button.addEventListener("click", () => switchPlatform(button.dataset.platform));
   });
 
-  elements.sizeMenuButton.addEventListener("click", () => toggleSizeMenu());
-  elements.sizeMenuButton.addEventListener("keydown", handleSizeMenuKeydown);
-  elements.sizeMenuList.addEventListener("keydown", handleSizeMenuKeydown);
-  document.addEventListener("pointerdown", (event) => {
-    if (state.sizeMenuOpen && !elements.sizeMenu.contains(event.target)) closeSizeMenu();
+  document.querySelector("#jumpToCases").addEventListener("click", () => {
+    const cases = document.querySelector("#studioCases");
+    cases.focus({ preventScroll: true });
+    cases.scrollIntoView({ behavior: prefersReducedMotion() ? "instant" : "smooth", block: "start" });
   });
 
   elements.welcomeNavButtons.forEach((button) => {
@@ -243,6 +289,8 @@ function bindEvents() {
   document.querySelectorAll("[data-prompt-preset]").forEach((button) => {
     button.addEventListener("click", () => {
       elements.prompt.value = button.dataset.promptPreset || "";
+      state.pendingPresetSize = button.dataset.presetSize || "";
+      if (state.backendReady) applyPresetSize();
       updatePromptCount();
       enterStudio(true);
       window.setTimeout(
@@ -287,7 +335,11 @@ function bindEvents() {
     renderParameterOptions(getSelectedModel());
   });
 
-  elements.size.addEventListener("change", updateDimensionsUI);
+  elements.size.addEventListener("change", () => {
+    renderResolutionOptions();
+    updateDimensionsUI();
+  });
+  elements.resolution.addEventListener("change", updateDimensionsUI);
   for (const input of [elements.customWidth, elements.customHeight]) {
     input.addEventListener("input", () => {
       updateDimensionsUI();
@@ -380,7 +432,7 @@ function bindEvents() {
 
 function switchPlatform(platform) {
   if (
-    elements.platformSwitch.hidden ||
+    elements.platformTabs.find((tab) => tab.dataset.platform === platform)?.disabled ||
     !["image", "video"].includes(platform) ||
     platform === state.activePlatform ||
     state.platformSwitching
@@ -388,7 +440,8 @@ function switchPlatform(platform) {
     return;
   }
 
-  closeSizeMenu();
+  sizeMenu.close();
+  formatMenu.close();
   state.platformSwitching = true;
   const current = elements.platformPanes.find((pane) => pane.dataset.platformPane === state.activePlatform);
   const incoming = elements.platformPanes.find((pane) => pane.dataset.platformPane === platform);
@@ -468,44 +521,6 @@ function updatePlatformStatus() {
   else setStatus("error", "图片服务未连接");
 }
 
-function renderSizeMenu() {
-  const options = Array.from(elements.size.options);
-  elements.sizeMenuList.replaceChildren();
-
-  options.forEach((option, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "glass-select-option";
-    button.dataset.value = option.value;
-    button.dataset.index = String(index);
-    button.id = `size-option-${index}`;
-    button.setAttribute("role", "option");
-
-    const shape = document.createElement("span");
-    shape.className = "ratio-shape";
-    const dimensions = ratioShapeDimensions(option.value);
-    shape.style.setProperty("--ratio-width", `${dimensions.width}px`);
-    shape.style.setProperty("--ratio-height", `${dimensions.height}px`);
-
-    const label = document.createElement("strong");
-    label.textContent = option.textContent;
-
-    const check = document.createElement("span");
-    check.className = "option-check";
-    check.setAttribute("aria-hidden", "true");
-
-    button.append(shape, label, check);
-    button.addEventListener("click", () => selectSizeOption(option.value));
-    button.addEventListener("pointermove", () => {
-      state.sizeMenuFocusIndex = index;
-      syncSizeMenuFocus();
-    });
-    elements.sizeMenuList.append(button);
-  });
-
-  syncSizeMenuSelection();
-}
-
 function ratioShapeDimensions(value) {
   const match = String(value).match(/^(\d+)x(\d+)$/);
   if (!match) return { width: 22, height: 18 };
@@ -514,89 +529,12 @@ function ratioShapeDimensions(value) {
   return { width: Math.max(11, Math.round(24 * ratio)), height: 24 };
 }
 
-function selectSizeOption(value) {
-  if (!Array.from(elements.size.options).some((option) => option.value === value)) return;
-  elements.size.value = value;
+function applyPresetSize() {
+  const preset = state.pendingPresetSize;
+  state.pendingPresetSize = "";
+  if (!preset || !Array.from(elements.size.options).some((option) => option.value === preset)) return;
+  elements.size.value = preset;
   elements.size.dispatchEvent(new Event("change", { bubbles: true }));
-  closeSizeMenu({ returnFocus: value !== "custom" });
-  if (value === "custom") elements.customWidth.focus({ preventScroll: true });
-}
-
-function syncSizeMenuSelection() {
-  const selected = elements.size.selectedOptions[0];
-  elements.sizeMenuValue.textContent = elements.size.value === "custom" && selectedSize()
-    ? `自定义 · ${selectedSize().replace("x", " × ")}`
-    : selected?.textContent || "选择比例";
-  const optionButtons = Array.from(elements.sizeMenuList.querySelectorAll(".glass-select-option"));
-  optionButtons.forEach((button, index) => {
-    const active = button.dataset.value === elements.size.value;
-    button.classList.toggle("selected", active);
-    button.setAttribute("aria-selected", String(active));
-    if (active) state.sizeMenuFocusIndex = index;
-  });
-  syncSizeMenuFocus();
-}
-
-function syncSizeMenuFocus() {
-  const options = Array.from(elements.sizeMenuList.querySelectorAll(".glass-select-option"));
-  options.forEach((button, index) => button.classList.toggle("focused", index === state.sizeMenuFocusIndex));
-  const focused = options[state.sizeMenuFocusIndex];
-  if (focused) elements.sizeMenuButton.setAttribute("aria-activedescendant", focused.id);
-}
-
-function toggleSizeMenu(forceOpen) {
-  const open = typeof forceOpen === "boolean" ? forceOpen : !state.sizeMenuOpen;
-  if (open) openSizeMenu();
-  else closeSizeMenu();
-}
-
-function openSizeMenu({ focusOption = false } = {}) {
-  if (state.sizeMenuOpen) return;
-  state.sizeMenuOpen = true;
-  elements.sizeMenu.classList.add("open");
-  elements.sizeMenuButton.setAttribute("aria-expanded", "true");
-  syncSizeMenuSelection();
-  if (focusOption) {
-    requestAnimationFrame(() => {
-      elements.sizeMenuList.querySelectorAll(".glass-select-option")[state.sizeMenuFocusIndex]?.focus();
-    });
-  }
-}
-
-function closeSizeMenu({ returnFocus = false } = {}) {
-  if (!state.sizeMenuOpen) return;
-  state.sizeMenuOpen = false;
-  elements.sizeMenu.classList.remove("open");
-  elements.sizeMenuButton.setAttribute("aria-expanded", "false");
-  if (returnFocus) elements.sizeMenuButton.focus({ preventScroll: true });
-}
-
-function handleSizeMenuKeydown(event) {
-  const options = Array.from(elements.sizeMenuList.querySelectorAll(".glass-select-option"));
-  if (!options.length) return;
-
-  if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-    event.preventDefault();
-    if (!state.sizeMenuOpen) openSizeMenu();
-    const direction = event.key === "ArrowDown" ? 1 : -1;
-    state.sizeMenuFocusIndex =
-      (state.sizeMenuFocusIndex + direction + options.length) % options.length;
-    syncSizeMenuFocus();
-    options[state.sizeMenuFocusIndex].focus();
-    return;
-  }
-
-  if (["Enter", " "].includes(event.key)) {
-    event.preventDefault();
-    if (!state.sizeMenuOpen) openSizeMenu({ focusOption: true });
-    else selectSizeOption(options[state.sizeMenuFocusIndex].dataset.value);
-    return;
-  }
-
-  if (event.key === "Escape") {
-    event.preventDefault();
-    closeSizeMenu({ returnFocus: true });
-  }
 }
 
 function showWelcomePage(pageName, updateHistory) {
@@ -765,6 +703,8 @@ async function loadCapabilities() {
 
     state.backendReady = true;
     renderCapabilities(body);
+    applyPresetSize();
+    elements.legacySettingsHint.hidden = Boolean(getSelectedModel()?.customSize);
     elements.capabilitySource.textContent = "当前模型配置";
     elements.submitButton.disabled = false;
     if (state.activePlatform === "image") setStatus("ready", "图片服务已连接");
@@ -873,14 +813,31 @@ function renderParameterOptions(model) {
   fillSelect(elements.size, model?.customSize ? [...sizes, "custom"] : sizes, SIZE_LABELS);
   fillSelect(elements.quality, model?.qualities || ["gateway-default"], QUALITY_LABELS);
   fillSelect(elements.outputFormat, model?.formats || ["png"], FORMAT_LABELS);
-  renderSizeMenu();
+  sizeMenu.render();
+  formatMenu.render();
+  renderResolutionOptions();
   updateDimensionsUI();
   updateDownloadLabel();
   elements.qualityHint.hidden = !model?.customSize;
 }
 
+function renderResolutionOptions() {
+  const select = elements.resolution;
+  const previousTier = select.selectedIndex;
+  const model = getSelectedModel();
+  const options = resolutionPresets(elements.size.value, model?.customSize);
+  const names = ["标准", "高分辨率", "最高分辨率"];
+  fillSelect(select, options, Object.fromEntries(options.map((size, index) =>
+    [size, `${names[index]} · ${size.replace("x", " × ")}`]
+  )));
+  elements.resolutionField.hidden = options.length < 2;
+  if (options.length > 1) select.selectedIndex = Math.min(previousTier >= 0 ? previousTier : 1, options.length - 1);
+}
+
 function selectedSize() {
-  if (elements.size.value !== "custom") return elements.size.value;
+  if (elements.size.value !== "custom") {
+    return elements.resolutionField.hidden ? elements.size.value : elements.resolution.value;
+  }
   const limits = getSelectedModel()?.customSize;
   if (!limits) return "";
   const width = elements.customWidth.valueAsNumber;
@@ -902,7 +859,7 @@ function updateDimensionsUI() {
     }
     elements.customSizeHint.textContent = `${limits.min}–${limits.max} px，宽高均为 ${limits.step} 的倍数；至少 ${limits.minPixels.toLocaleString("zh-CN")} 像素，长短边之比不超过 ${limits.maxRatio}:1。`;
   }
-  syncSizeMenuSelection();
+  sizeMenu.sync();
   const size = selectedSize();
   if (size && !state.lastResult) setStageRatio(size);
 }

@@ -17,7 +17,8 @@
         document.documentElement.dataset.theme = dark ? "dark" : "light";
       })();
     </script>
-    <link rel="stylesheet" href="/styles.css?v=20261123-image26" />
+    <link rel="stylesheet" href="/styles.css?v=20261123-studio-editorial" />
+    <link rel="stylesheet" href="/editorial.css?v=20261123-studio-editorial" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -54,37 +55,45 @@
             data-page="home"
             aria-labelledby="welcomeTitle"
           >
-            <div class="welcome-copy">
-              <h1 id="welcomeTitle">
-                从一句构想到一张图<br />
-                让 <span>细节</span> 说话
-              </h1>
-              <p class="welcome-statement">
-                可以从零描述一幕，也可以上传参考图，只改你想改的地方。
-              </p>
-            </div>
+            <div class="editorial-home">
+              <div class="editorial-hero">
+                <div class="welcome-copy">
+                  <p class="editorial-index"><span></span> 图像工作台 <b>·</b> 创作手记 01</p>
+                  <h1 id="welcomeTitle">先构图，<span>再生图。</span></h1>
+                  <p class="welcome-statement">给画面一个明确任务：封面要留刊头，横幅要让出标题位，风景要先定地平线。可以从案例起步，也可以上传参考图再改光线、材质或色调。</p>
+                  <div class="editorial-actions">
+                    <button class="welcome-cta" id="startStudioButton" type="button">
+                      <i data-lucide="sparkles" aria-hidden="true"></i><span>开始创作</span>
+                    </button>
+                    <button type="button" class="editorial-jump" id="jumpToCases">查看创作案例 <i data-lucide="arrow-down" aria-hidden="true"></i></button>
+                  </div>
+                </div>
+                <figure class="editorial-cover">
+                  <img class="welcome-reference-art" src="/assets/reference-dream-gallery.jpg" alt="低机位拍摄的玻璃画廊，倒影指向雪山和淡紫色星球" />
+                  <figcaption><span><b>01</b> 玻璃地平线</span><span>广角 · 轴线构图 · 冷暖对照</span></figcaption>
+                </figure>
+              </div>
 
-            <img
-              class="welcome-reference-art"
-              src="/assets/reference-dream-gallery.jpg"
-              alt="玻璃画廊环绕梦境星球与雪山湖面的创意场景"
-            />
-
-            <button class="welcome-cta" id="startStudioButton" type="button">
-              <span>开始创作</span>
-              <i data-lucide="arrow-right" aria-hidden="true"></i>
-            </button>
-
-            <div class="welcome-benefits welcome-starters" aria-label="把示例带入工作台">
-              <button type="button" data-prompt-preset="编辑摄影：透明香水瓶立于磨砂玻璃台座，冷白侧光勾出瓶肩，淡紫投影落向右下；竖幅，主体下移，画面上方留三分之一排版空间，不生成文字。">
-                <i data-lucide="box" aria-hidden="true"></i><span>产品静物</span>
-              </button>
-              <button type="button" data-prompt-preset="独立建筑杂志封面底图，极简玻璃回廊朝画面中央消失，银灰雾面地板与薰衣草色漫反射；竖幅，顶部留干净刊头区，不出现标志或文字。">
-                <i data-lucide="book-open" aria-hidden="true"></i><span>杂志封面</span>
-              </button>
-              <button type="button" data-prompt-preset="科幻长片的开场镜头：粉紫暮色落在盐湖上，远处一颗巨大的淡紫色星球，静止水面压低地平线；21 世纪电影摄影，轻微银盐颗粒，宁静不艳丽，无文字。">
-                <i data-lucide="clapperboard" aria-hidden="true"></i><span>电影场景</span>
-              </button>
+              <section class="editorial-shelf" id="studioCases" tabindex="-1" aria-labelledby="casesTitle">
+                <header class="editorial-section-heading">
+                  <div><p>构图练习 / 01–03</p><h2 id="casesTitle">三张图，三种画面任务</h2></div>
+                  <p>选择案例，把画面描述和建议比例带入工作台；不会自动生成。</p>
+                </header>
+                <div class="editorial-grid">
+                  <button class="editorial-case" type="button" data-preset-size="1024x1280" data-prompt-preset="建筑杂志封面底图，竖幅 4:5。镜头置于玻璃回廊中轴，利用地面反光与立柱导向中心消失点。保留上方四分之一均匀的冷灰留白供刊头，淡紫天光只出现在玻璃边缘，不生成文字、标志或人物。">
+                    <img src="/assets/work-glass-passage.jpg" alt="银灰玻璃回廊" />
+                    <span class="case-body"><span class="case-tag">01 / 杂志封面 · 4:5</span><strong>把刊头留给排版</strong><span class="case-technique">用回廊的消失点抓住视线，上部保持干净。</span><span class="case-link">试用提示词 <i data-lucide="arrow-up-right" aria-hidden="true"></i></span></span>
+                  </button>
+                  <button class="editorial-case" type="button" data-preset-size="1536x864" data-prompt-preset="建筑品牌网站首页横幅，16:9。清晨云海中的玻璃酒店置于左侧三分点，从外立面四十五度视角取景；逆光只照亮窗框和建筑边缘，右侧保留连续而低对比的云面用于叠加标题。冷灰蓝配色，不生成文字或标志。">
+                    <img src="/assets/work-cloud-window.jpg" alt="云海边的玻璃建筑" />
+                    <span class="case-body"><span class="case-tag">02 / 品牌横幅 · 16:9</span><strong>给标题让出画面</strong><span class="case-technique">主体靠左，右侧用低对比云海承接文字。</span><span class="case-link">试用提示词 <i data-lucide="arrow-up-right" aria-hidden="true"></i></span></span>
+                  </button>
+                  <button class="editorial-case" type="button" data-preset-size="1536x768" data-prompt-preset="科幻短片开场静帧，2:1 宽幅。把水平线压在下方三分之一，远山只作轮廓，一颗淡紫行星占据中央偏右。用水面一条细亮反射连接近处和天体，阴影保持深蓝，克制饱和度，细微胶片颗粒。不生成文字。">
+                    <img src="/assets/work-lavender-orbit.jpg" alt="雪山湖面上的淡紫行星" />
+                    <span class="case-body"><span class="case-tag">03 / 电影静帧 · 2:1</span><strong>用低地平线建立尺度</strong><span class="case-technique">缩小山峰和地面比例，让星体成为画面焦点。</span><span class="case-link">试用提示词 <i data-lucide="arrow-up-right" aria-hidden="true"></i></span></span>
+                  </button>
+                </div>
+              </section>
             </div>
           </section>
 
@@ -295,7 +304,7 @@
       </header>
 
       <main class="app-shell">
-        <div class="platform-switch" id="platformSwitch" hidden inert role="tablist" aria-label="生成平台">
+        <div class="platform-switch" id="platformSwitch" role="tablist" aria-label="生成平台">
           <span class="platform-switch-indicator" aria-hidden="true"></span>
           <button
             class="active"
@@ -315,10 +324,12 @@
             role="tab"
             aria-selected="false"
             aria-controls="videoPlatformPane"
+            aria-label="视频生成（暂未开放）"
             data-platform="video"
+            disabled
           >
             <i data-lucide="video" aria-hidden="true"></i>
-            <span>视频生成</span>
+            <span>视频生成</span><small class="platform-badge">暂未开放</small>
           </button>
         </div>
 
@@ -452,9 +463,20 @@
                 </div>
 
                 <div class="field">
-                  <label for="outputFormat">下载格式</label>
-                  <select id="outputFormat" name="output_format" aria-label="下载格式"></select>
+                  <span class="field-control-label" id="formatLabel">下载格式</span>
+                  <div class="glass-select" id="formatMenu">
+                    <button class="glass-select-trigger" id="formatMenuButton" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="formatLabel formatMenuValue">
+                      <span id="formatMenuValue">PNG</span>
+                      <i data-lucide="chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="glass-select-popover" id="formatMenuList" role="listbox" aria-labelledby="formatLabel"></div>
+                    <select class="native-select-proxy" id="outputFormat" name="output_format" aria-hidden="true" tabindex="-1" hidden></select>
+                  </div>
                 </div>
+              </div>
+              <div class="field resolution-field" id="resolutionField" hidden>
+                <label for="resolution">分辨率</label>
+                <select id="resolution" aria-describedby="qualityHint" disabled></select>
               </div>
               <fieldset class="custom-dimensions" id="customDimensions" hidden disabled aria-describedby="customSizeHint">
                 <legend>自定义尺寸 · px</legend>
@@ -462,7 +484,8 @@
                 <label for="customHeight">高<input id="customHeight" type="number" inputmode="numeric" value="768" required /></label>
                 <p id="customSizeHint"></p>
               </fieldset>
-              <p class="parameter-note" id="qualityHint" hidden>生成质量由供应商处理；像素尺寸由所选比例或自定义宽高决定。</p>
+              <p class="parameter-note" id="qualityHint" hidden>分辨率决定像素大小；生成质量是传给供应商的处理档位。</p>
+              <p class="parameter-note" id="legacySettingsHint" hidden>当前连接使用基础模型；切换到 GPT Image 2.6 后可选择自定义比例和更多生成质量。</p>
             </div>
 
             <button class="primary-button" id="submitButton" type="submit" disabled>
@@ -726,6 +749,6 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/app.js?v=20261123-image26" type="module"></script>
+    <script src="/app.js?v=20261123-studio-editorial" type="module"></script>
   </body>
 </html>
