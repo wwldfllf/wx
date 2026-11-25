@@ -173,7 +173,8 @@ async function apiFetch(config, endpoint, options) {
   try {
     const response = await fetch(`${config.apiBaseUrl}${endpoint}`, {
       ...requestOptions,
-      redirect: "error",
+      // Workers supports manual redirects; never forward the upstream API key to another URL.
+      redirect: "manual",
       signal: controller.signal,
       headers
     });
@@ -183,6 +184,13 @@ async function apiFetch(config, endpoint, options) {
       timeoutMs,
       transport: "fetch"
     };
+    if (response.status >= 300 && response.status < 400) {
+      void response.body?.cancel().catch(() => {});
+      throw Object.assign(new Error("上游图片接口返回重定向，服务器未跟随该请求。"), {
+        status: 502,
+        details: { ...response.image2Studio, upstreamStatus: response.status }
+      });
+    }
     return response;
   } catch (error) {
     if (error.name === "AbortError") {
