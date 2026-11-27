@@ -18,7 +18,7 @@
       })();
     </script>
     <link rel="stylesheet" href="/styles.css?v=20261127-studio-motion" />
-    <link rel="stylesheet" href="/editorial.css?v=20261127-workbench" />
+    <link rel="stylesheet" href="/editorial.css?v=20261127-paper-studio" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -352,7 +352,7 @@
           <form class="control-panel" id="generateForm">
             <div class="field prompt-field">
               <div class="field-label-row prompt-heading">
-                <h2><label for="prompt">画面描述</label></h2>
+                <h2><span class="workbench-folio" aria-hidden="true">01</span><label for="prompt">画面描述</label></h2>
                 <p class="mode-label" id="modeLabel">文生图</p>
               </div>
               <textarea
@@ -487,7 +487,7 @@
 
           <section class="result-panel" aria-labelledby="previewTitle" aria-live="polite">
             <header class="result-header">
-              <h2 id="previewTitle">预览</h2>
+              <h2 id="previewTitle"><span class="workbench-folio" aria-hidden="true">02</span>预览</h2>
 
               <button
                 class="download-button"
@@ -506,7 +506,7 @@
                   <i data-lucide="frame"></i>
                 </span>
                 <div>
-                  <strong>还没有生成图片</strong>
+                  <strong>等待第一张作品</strong>
                   <p>写下画面描述，生成后在这里预览。</p>
                 </div>
               </div>
@@ -734,6 +734,6 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/app.js?v=20261127-workbench" type="module"></script>
+    <script src="/app.js?v=20261127-paper-studio" type="module"></script>
   </body>
 </html>

@@ -11,14 +11,34 @@ export function createGlassMenu({ root, trigger, list, select, value, decorate, 
     list.inert = true;
     if (returnFocus) trigger.focus({ preventScroll: true });
   };
+  const place = () => {
+    const { top, bottom } = trigger.getBoundingClientRect();
+    const toolbarBottom = root.closest(".studio-experience")?.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 0;
+    const gutter = 12;
+    const above = top - Math.max(toolbarBottom, 0) - gutter;
+    const below = window.innerHeight - bottom - gutter;
+    const preferred = Math.min(list.scrollHeight, 310, window.innerHeight * 0.42);
+    const up = below < preferred && above > below;
+    root.classList.toggle("opens-up", up);
+    list.style.setProperty("--menu-available", `${Math.max(44, Math.floor(up ? above : below))}px`);
+  };
+  const focusRow = (row) => {
+    if (!row) return;
+    row.focus({ preventScroll: true });
+    if (row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop;
+    else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight;
+    }
+  };
   const show = (key) => {
     if (!rows.length) return;
     open = true;
     root.classList.add("open");
     trigger.setAttribute("aria-expanded", "true");
     list.inert = false;
+    place();
     const selected = rows[Math.max(0, select.selectedIndex)];
-    (key === "ArrowUp" ? rows.at(-1) : selected)?.focus();
+    focusRow(key === "ArrowUp" ? rows.at(-1) : selected);
   };
   const sync = () => {
     const option = select.selectedOptions[0];
@@ -74,7 +94,7 @@ export function createGlassMenu({ root, trigger, list, select, value, decorate, 
       event.preventDefault();
       const next = event.key === "Home" ? 0 : event.key === "End" ? rows.length - 1 :
         (index + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
-      rows[next]?.focus();
+      focusRow(rows[next]);
     } else if (event.key === "Tab") {
       // The options are not in the tab order; move from the trigger, not a removed option.
       close(true);
@@ -86,6 +106,7 @@ export function createGlassMenu({ root, trigger, list, select, value, decorate, 
   document.addEventListener("pointerdown", (event) => {
     if (!root.contains(event.target)) close();
   });
+  window.addEventListener("resize", () => { if (open) place(); });
   select.addEventListener("change", sync);
   return { render, sync, close };
 }

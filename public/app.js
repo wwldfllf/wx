@@ -1,5 +1,5 @@
 import { exportImage } from "./image-export.js?v=20261123-image26";
-import { createGlassMenu } from "./glass-menu.js?v=20261123-studio-editorial";
+import { createGlassMenu } from "./glass-menu.js?v=20261127-paper-studio";
 import { resolutionPresets } from "./image-dimensions.js?v=20261123-studio-editorial";
 
 const GENERATION_TIMEOUT_MS = 630000;
