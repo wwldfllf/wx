@@ -18,7 +18,7 @@
       })();
     </script>
     <link rel="stylesheet" href="/styles.css?v=20261127-studio-motion" />
-    <link rel="stylesheet" href="/editorial.css?v=20261127-paper-studio" />
+    <link rel="stylesheet" href="/editorial.css?v=20261127-unified-menus" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -411,7 +411,15 @@
                 <span class="group-label">生成设置</span>
                 <div class="model-setting">
                   <span id="capabilitySource">正在读取模型</span>
-                  <select id="model" name="model" aria-label="模型" hidden></select>
+                  <div class="glass-select glass-select--end" id="modelMenu" hidden>
+                    <span class="native-select-proxy" id="modelLabel">模型</span>
+                    <button class="glass-select-trigger" id="modelMenuButton" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="modelLabel modelMenuValue">
+                      <span id="modelMenuValue">—</span>
+                      <i data-lucide="chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="glass-select-popover" id="modelMenuList" role="listbox" aria-label="模型"></div>
+                    <select class="native-select-proxy" id="model" name="model" aria-hidden="true" tabindex="-1" hidden></select>
+                  </div>
                 </div>
               </div>
 
@@ -448,8 +456,15 @@
                 </div>
 
                 <div class="field resolution-field" id="resolutionField" hidden>
-                  <label for="resolution">分辨率</label>
-                  <select id="resolution" aria-describedby="qualityHint" disabled></select>
+                  <span class="field-control-label" id="resolutionLabel">分辨率</span>
+                  <div class="glass-select glass-select--end" id="resolutionMenu">
+                    <button class="glass-select-trigger" id="resolutionMenuButton" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="resolutionLabel resolutionMenuValue" aria-describedby="qualityHint" disabled>
+                      <span id="resolutionMenuValue">—</span>
+                      <i data-lucide="chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="glass-select-popover" id="resolutionMenuList" role="listbox" aria-labelledby="resolutionLabel"></div>
+                    <select class="native-select-proxy" id="resolution" aria-hidden="true" tabindex="-1" hidden disabled></select>
+                  </div>
                 </div>
                 <fieldset class="custom-dimensions" id="customDimensions" hidden disabled aria-describedby="customSizeHint">
                   <legend>自定义尺寸 · px</legend>
@@ -459,13 +474,20 @@
                 </fieldset>
 
                 <div class="field">
-                  <label for="quality">生成质量</label>
-                  <select id="quality" name="quality" aria-label="生成质量"></select>
+                  <span class="field-control-label" id="qualityLabel">生成质量</span>
+                  <div class="glass-select" id="qualityMenu">
+                    <button class="glass-select-trigger" id="qualityMenuButton" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="qualityLabel qualityMenuValue" aria-describedby="qualityHint" disabled>
+                      <span id="qualityMenuValue">—</span>
+                      <i data-lucide="chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="glass-select-popover" id="qualityMenuList" role="listbox" aria-labelledby="qualityLabel"></div>
+                    <select class="native-select-proxy" id="quality" name="quality" aria-hidden="true" tabindex="-1" hidden></select>
+                  </div>
                 </div>
 
                 <div class="field">
                   <span class="field-control-label" id="formatLabel">下载格式</span>
-                  <div class="glass-select" id="formatMenu">
+                  <div class="glass-select glass-select--end" id="formatMenu">
                     <button class="glass-select-trigger" id="formatMenuButton" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="formatLabel formatMenuValue">
                       <span id="formatMenuValue">PNG</span>
                       <i data-lucide="chevron-down" aria-hidden="true"></i>
@@ -734,6 +756,6 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/app.js?v=20261127-paper-studio" type="module"></script>
+    <script src="/app.js?v=20261127-unified-menus" type="module"></script>
   </body>
 </html>

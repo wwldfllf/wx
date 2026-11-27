@@ -25,13 +25,33 @@ async page => {
       scrollWidth: document.documentElement.scrollWidth,
       submitBottom: Math.round(box('#submitButton').bottom),
       previewBelow: stage.top > panel.bottom,
-      aligned: Math.abs(box('#sizeMenuButton').top - box('#resolution').top) <= 1 && Math.abs(box('#quality').top - box('#formatMenuButton').top) <= 1
+      aligned: Math.abs(box('#sizeMenuButton').top - box('#resolutionMenuButton').top) <= 1 && Math.abs(box('#qualityMenuButton').top - box('#formatMenuButton').top) <= 1
     };
   });
   const setViewport = async (width, height) => {
     await page.setViewportSize({width,height});
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
+  // All four generation parameters must share the trigger and popover, not just an arrow.
+  await setViewport(1440,930);
+  for (const name of ['size','resolution','quality','format']) {
+    const trigger = page.locator(`#${name}MenuButton`);
+    assert(await trigger.count() === 1, `${name} still lacks the shared dropdown trigger`);
+    await trigger.press('ArrowDown');
+    const menu = page.locator(`#${name}MenuList`);
+    assert(await menu.isVisible() && await menu.getByRole('option', {selected:true}).count() === 1, `${name} lacks shared list or selection state`);
+    assert(await menu.evaluate(el => el.classList.contains('glass-select-popover')), `${name} is not using the shared popover styling`);
+    await page.keyboard.press('Escape');
+    assert(await trigger.getAttribute('aria-expanded') === 'false', `${name} must close with Escape`);
+  }
+  const resolution = page.locator('#resolutionMenuButton');
+  await resolution.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  assert((await resolution.innerText()).includes('最高'), 'Resolution must update the trigger after keyboard selection');
+  assert(await page.locator('#resolution').inputValue() === '2048x2048', 'Resolution selection must reach the backend field');
+  await resolution.click();
+  await page.screenshot({path:'outputs/unified-resolution-menu.png',animations:'disabled'});
+  await page.keyboard.press('Escape');
   const desktop = [];
   for (const [width, height] of [[1440,930],[1920,1080],[1366,768],[900,900]]) {
     await setViewport(width,height);
@@ -74,7 +94,8 @@ async page => {
   await page.getByRole('option', {name:/自定义/}).click();
   await page.locator('#customWidth').fill('1024');
   await page.locator('#customHeight').fill('768');
-  await page.locator('#quality').selectOption('medium');
+  await page.locator('#qualityMenuButton').click();
+  await page.getByRole('option', {name:'中 · 标准'}).click();
   await page.locator('#formatMenuButton').click();
   await page.getByRole('option', {name:/WebP/}).click();
   await page.locator('#prompt').fill('暖白纸面上，一扇砂岩拱门和它后面的陶红夕阳。');
@@ -134,6 +155,42 @@ async page => {
   } finally {
     await page.unroute('**/api/generate-stream');
   }
-  await theme.selectOption(originalTheme);
+  await setViewport(320,800);
+  await page.goto(site + '/?qa=compact-menus#studio');
+  await theme.selectOption({label:'深色'});
+  await page.waitForFunction(() => document.querySelector('#statusText').textContent === '图片服务已连接');
+  for (const name of ['size','resolution','quality','format']) {
+    const trigger = page.locator(`#${name}MenuButton`);
+    await trigger.scrollIntoViewIfNeeded();
+    await trigger.press('ArrowDown');
+    const bounds = await page.locator(`#${name}MenuList`).boundingBox();
+    assert(bounds && bounds.x >= 0 && bounds.x + bounds.width <= 320.5, `${name} list overflows on a 320px viewport`);
+    if (name === 'resolution') {
+      const allSingleLine = await page.locator('#resolutionMenuList .glass-select-option strong').evaluateAll(labels =>
+        labels.every(label => label.getBoundingClientRect().height <= parseFloat(getComputedStyle(label).lineHeight) + 1)
+      );
+      assert(allSingleLine, 'Resolution tiers should fit on one line even on a narrow screen');
+    }
+    if (name === 'quality') await page.screenshot({path:'outputs/unified-quality-menu-mobile.png',animations:'disabled'});
+    await page.keyboard.press('Escape');
+  }
+  assert(await page.locator('#modelMenu').isHidden(), 'Single-model mode should remain read-only');
+  const caps = await (await page.request.get(`${site}/api/capabilities`)).json();
+  const fallback = {id:'gpt-image-2',label:'GPT Image 2',sizes:['1024x1024','1536x1024'],qualities:['gateway-default'],formats:['png']};
+  await page.route('**/api/capabilities', route => route.fulfill({json:{...caps, models:[...caps.models.filter(model => model.id !== fallback.id), fallback]}}));
+  try {
+    await page.reload();
+    const modelTrigger = page.locator('#modelMenuButton');
+    await modelTrigger.click();
+    await page.getByRole('option', {name:fallback.label,exact:true}).click();
+    assert(await page.locator('#resolutionField').isHidden(), 'The basic model must not show unsupported resolution tiers');
+    assert(await page.locator('#qualityMenuButton').isDisabled(), 'One available quality should not open a menu');
+    await modelTrigger.click();
+    await page.getByRole('option', {name:'GPT Image 2.6',exact:true}).click();
+    assert(await page.locator('#resolutionMenuButton').isEnabled(), 'Switching back must restore the shared resolution menu');
+  } finally {
+    await page.unroute('**/api/capabilities');
+    await theme.selectOption(originalTheme);
+  }
   return {desktop,mobile,preview:'Mocked landscape and portrait, print reveal and WebP download passed'};
 }

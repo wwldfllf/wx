@@ -41,18 +41,20 @@ const checks = {
   hasCustomSizeMenu:
     home.includes('id="sizeMenuButton"') &&
     home.includes('id="sizeMenuList"') &&
-    app.includes("const sizeMenu = createGlassMenu("),
+    app.includes('createParameterMenu("size",'),
   hasVideoPreview: /id="videoPlatformTab"[\s\S]*?data-platform="video"\s+disabled/.test(home) && home.includes("暂未开放"),
-  hasSharedFormatMenu: home.includes('id="formatMenuList"') && app.includes("const formatMenu = createGlassMenu("),
+  hasSharedParameterMenus: ["size", "resolution", "quality", "format", "model"].every((name) =>
+    home.includes(`id="${name}MenuList"`) && app.includes(`createParameterMenu("${name}",`)
+  ),
   hasResolution: home.includes('id="resolutionField"') && app.includes("resolutionPresets("),
   hasEditorialHome: home.includes('id="studioCases"') && (home.match(/data-preset-size=/g) || []).length === 3,
   hasCustomSize: home.includes('id="customDimensions"') && home.includes('id="customWidth"') && home.includes('id="customHeight"'),
   hasThemePicker: (home.match(/data-theme-picker/g) || []).length === 2 && editorial.includes('data-theme="dark"'),
   hasStarterCases: (home.match(/data-prompt-preset=/g) || []).length >= 6,
   hasVersionedAssets:
-    home.includes("app.js?v=20261127-paper-studio") &&
+    home.includes("app.js?v=20261127-unified-menus") &&
     home.includes("styles.css?v=20261127-studio-motion") &&
-    home.includes("editorial.css?v=20261127-paper-studio") &&
+    home.includes("editorial.css?v=20261127-unified-menus") &&
     !home.includes("welcome-scene.js"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
   hasQuietTheme: editorial.includes("--atelier-display") && editorial.includes("prefers-reduced-motion: reduce") && editorial.includes('[data-theme="dark"]'),
@@ -88,7 +90,7 @@ if (
   !checks.hasUpload ||
   !checks.hasResultStage ||
   !checks.hasCustomSizeMenu ||
-  !checks.hasVideoPreview || !checks.hasSharedFormatMenu || !checks.hasResolution || !checks.hasEditorialHome ||
+  !checks.hasVideoPreview || !checks.hasSharedParameterMenus || !checks.hasResolution || !checks.hasEditorialHome ||
   !checks.hasCustomSize || !checks.hasThemePicker || !checks.hasStarterCases
 ) {
   throw new Error("首页缺少关键 UI 节点。");

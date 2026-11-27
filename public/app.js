@@ -1,5 +1,5 @@
 import { exportImage } from "./image-export.js?v=20261123-image26";
-import { createGlassMenu } from "./glass-menu.js?v=20261127-paper-studio";
+import { createGlassMenu } from "./glass-menu.js?v=20261127-unified-menus";
 import { resolutionPresets } from "./image-dimensions.js?v=20261123-studio-editorial";
 
 const GENERATION_TIMEOUT_MS = 630000;
@@ -110,17 +110,10 @@ const elements = {
   prompt: document.querySelector("#prompt"),
   promptCount: document.querySelector("#promptCount"),
   model: document.querySelector("#model"),
+  modelMenu: document.querySelector("#modelMenu"),
   size: document.querySelector("#size"),
-  sizeMenu: document.querySelector("#sizeMenu"),
-  sizeMenuButton: document.querySelector("#sizeMenuButton"),
-  sizeMenuValue: document.querySelector("#sizeMenuValue"),
-  sizeMenuList: document.querySelector("#sizeMenuList"),
   quality: document.querySelector("#quality"),
   outputFormat: document.querySelector("#outputFormat"),
-  formatMenu: document.querySelector("#formatMenu"),
-  formatMenuButton: document.querySelector("#formatMenuButton"),
-  formatMenuList: document.querySelector("#formatMenuList"),
-  formatMenuValue: document.querySelector("#formatMenuValue"),
   resolution: document.querySelector("#resolution"),
   resolutionField: document.querySelector("#resolutionField"),
   legacySettingsHint: document.querySelector("#legacySettingsHint"),
@@ -187,12 +180,26 @@ const elements = {
   videoMessageBox: document.querySelector("#videoMessageBox")
 };
 
-const sizeMenu = createGlassMenu({
-  root: elements.sizeMenu,
-  trigger: elements.sizeMenuButton,
-  list: elements.sizeMenuList,
-  select: elements.size,
-  value: elements.sizeMenuValue,
+function createParameterMenu(name, select, options) {
+  return createGlassMenu({
+    root: document.getElementById(`${name}Menu`),
+    trigger: document.getElementById(`${name}MenuButton`),
+    list: document.getElementById(`${name}MenuList`),
+    value: document.getElementById(`${name}MenuValue`),
+    select,
+    ...options
+  });
+}
+
+function menuBadge(text) {
+  const badge = document.createElement("span");
+  badge.className = "parameter-badge";
+  badge.setAttribute("aria-hidden", "true");
+  badge.textContent = text;
+  return badge;
+}
+
+const sizeMenu = createParameterMenu("size", elements.size, {
   decorate(option) {
     const shape = document.createElement("span");
     shape.className = "ratio-shape";
@@ -211,19 +218,17 @@ const sizeMenu = createGlassMenu({
   }
 });
 
-const formatMenu = createGlassMenu({
-  root: elements.formatMenu,
-  trigger: elements.formatMenuButton,
-  list: elements.formatMenuList,
-  select: elements.outputFormat,
-  value: elements.formatMenuValue,
-  decorate(option) {
-    const icon = document.createElement("span");
-    icon.className = "format-shape";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = { png: "P", jpeg: "J", webp: "W" }[option.value] || "·";
-    return icon;
-  }
+const resolutionMenu = createParameterMenu("resolution", elements.resolution, {
+  decorate: (option) => menuBadge(`0${option.index + 1}`)
+});
+const qualityMenu = createParameterMenu("quality", elements.quality, {
+  decorate: (option) => menuBadge({ auto: "A", low: "L", medium: "M", high: "H" }[option.value] || "—")
+});
+const formatMenu = createParameterMenu("format", elements.outputFormat, {
+  decorate: (option) => menuBadge({ png: "P", jpeg: "J", webp: "W" }[option.value] || "·")
+});
+const modelMenu = createParameterMenu("model", elements.model, {
+  decorate: () => menuBadge("AI")
 });
 
 let editorialCaseObserver;
@@ -441,8 +446,7 @@ function switchPlatform(platform) {
     return;
   }
 
-  sizeMenu.close();
-  formatMenu.close();
+  for (const menu of [sizeMenu, resolutionMenu, qualityMenu, formatMenu, modelMenu]) menu.close();
   state.platformSwitching = true;
   const current = elements.platformPanes.find((pane) => pane.dataset.platformPane === state.activePlatform);
   const incoming = elements.platformPanes.find((pane) => pane.dataset.platformPane === platform);
@@ -828,7 +832,8 @@ function renderModels(models, defaultModel) {
   if (preferred) elements.model.value = preferred;
   const hasModelChoice = models.length > 1;
   elements.model.disabled = !hasModelChoice;
-  elements.model.hidden = !hasModelChoice;
+  elements.modelMenu.hidden = !hasModelChoice;
+  modelMenu.render();
   elements.capabilitySource.hidden = hasModelChoice;
   if (state.backendReady && !hasModelChoice) {
     elements.capabilitySource.textContent = elements.model.selectedOptions[0]?.textContent || "未配置模型";
@@ -842,6 +847,7 @@ function renderParameterOptions(model) {
   fillSelect(elements.quality, model?.qualities || ["gateway-default"], QUALITY_LABELS);
   fillSelect(elements.outputFormat, model?.formats || ["png"], FORMAT_LABELS);
   sizeMenu.render();
+  qualityMenu.render();
   formatMenu.render();
   renderResolutionOptions();
   updateDimensionsUI();
@@ -860,6 +866,7 @@ function renderResolutionOptions() {
   )));
   elements.resolutionField.hidden = options.length < 2;
   if (options.length > 1) select.selectedIndex = Math.min(previousTier >= 0 ? previousTier : 1, options.length - 1);
+  resolutionMenu.render();
 }
 
 function selectedSize() {

@@ -218,7 +218,6 @@
   --studio-gutter: clamp(14px, 1.65vw, 34px);
   --studio-radius: 6px;
   --studio-grain: url("/assets/atelier/paper-grain.svg?v=20261127");
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6' fill='none' stroke='%23625b50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --page: #eeebe2;
   --surface: #fffdf6;
   --surface-solid: #fffdf7;
@@ -239,7 +238,6 @@
   background: var(--studio-grain), var(--page);
 }
 :root[data-theme="dark"] .studio-experience {
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6' fill='none' stroke='%23cabdaf' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --page: #22211e;
   --surface: #2e2b26;
   --surface-solid: #36312b;
@@ -317,7 +315,10 @@
 .control-panel :is(textarea, select, .glass-select-trigger, .custom-dimensions input) { border: 1px solid var(--line); border-radius: 4px; color: var(--text); background: var(--workbench-input); box-shadow: inset 0 1px 2px var(--sheet-shadow); backdrop-filter: none; transition: border-color 160ms ease; }
 .control-panel textarea { min-height: 115px; max-height: none; padding: 12px 13px; line-height: 1.65; resize: vertical; }
 .control-panel :is(textarea, select, .glass-select-trigger, .custom-dimensions input):hover:not(:disabled) { border-color: var(--line-strong); }
-.control-panel .glass-select-trigger[aria-expanded="true"] { border-color: var(--accent); }
+.control-panel .glass-select.open .glass-select-trigger {
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 2px var(--sheet-shadow);
+}
 .control-panel textarea::placeholder { color: var(--faint); }
 .control-panel :is(textarea, select, .glass-select-trigger, .custom-dimensions input):focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; box-shadow: none; }
 .control-panel :is(.upload-zone, .preview-row, .icon-button) { border-color: var(--line-strong); border-radius: 6px; color: var(--text); background: none; box-shadow: none; backdrop-filter: none; }
@@ -328,23 +329,12 @@
 .control-panel .upload-zone:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
 .settings-block { border-top: 1px solid var(--sheet-edge); padding-top: 11px; gap: 8px; }
 .model-setting { min-width: 0; max-width: 62%; color: var(--muted); text-align: right; font-size: .74rem; }
-.model-setting #model { min-height: 34px; width: auto; max-width: 100%; }
+.model-setting .glass-select-trigger,
+.param-grid .glass-select-trigger { min-height: 42px; margin: 0; }
 .param-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 10px; }
 .param-grid > .field { min-width: 0; align-content: start; gap: 5px; }
 .param-grid > .field > :is(label, .field-control-label) { font-size: .8rem; line-height: 1.25; }
 .param-grid:has(> #resolutionField[hidden]) > .field:first-child { grid-column: 1 / -1; }
-.param-grid :is(select, .glass-select-trigger) { min-height: 42px; margin: 0; }
-.control-panel .param-grid select:not([hidden]) {
-  appearance: none;
-  max-width: 100%;
-  padding-inline: 10px 29px;
-  background: var(--select-chevron) right 9px center / 16px 16px no-repeat var(--workbench-input);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-@media (forced-colors: active) {
-  .control-panel .param-grid select:not([hidden]) { appearance: auto; background-image: none; }
-}
 .glass-select { min-width: 0; }
 .resolution-field { margin-top: 0; }
 .custom-dimensions { grid-column: 1 / -1; margin: 0; border-radius: 6px; }
@@ -353,7 +343,7 @@
 .glass-select-popover {
   top: calc(100% + 6px);
   right: auto;
-  width: max(100%, 178px);
+  width: max(100%, 200px);
   max-height: min(310px, 42svh, var(--menu-available, 310px));
   border: 1px solid var(--line-strong);
   border-radius: 6px;
@@ -365,14 +355,21 @@
 .glass-select.opens-up .glass-select-popover { top: auto; bottom: calc(100% + 6px); transform-origin: bottom center; }
 .glass-select.opens-up:not(.open) .glass-select-popover { transform: translateY(5px) scale(.98); }
 .glass-select-trigger { min-width: 0; gap: 5px; padding-inline: 10px; }
-#formatMenuList { left: auto; right: 0; }
+.glass-select--end > .glass-select-popover { left: auto; right: 0; }
 .glass-select-trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .glass-select-trigger > svg { flex: none; color: var(--muted); }
-.glass-select-option { color: var(--muted); border-radius: 4px; }
+.glass-select-trigger:disabled { cursor: default; color: var(--muted); }
+.glass-select-option {
+  grid-template-columns: 26px minmax(0, 1fr) 16px;
+  column-gap: 8px;
+  padding-inline: 8px;
+  color: var(--muted);
+  border-radius: 4px;
+}
 .glass-select-option :is(strong, .ratio-option-title) { color: var(--text); }
 .glass-select-option:is(:hover, .focused, .selected) { background: var(--accent-soft); color: var(--text); box-shadow: none; }
 .glass-select-option:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.format-shape { display: grid; place-items: center; height: 22px; width: 23px; justify-self: center; border: 1px solid currentColor; border-radius: 4px; font-size: .62rem; font-weight: 700; }
+.parameter-badge { display: grid; place-items: center; height: 22px; width: 23px; justify-self: center; border: 1px solid currentColor; border-radius: 4px; font: 700 .62rem/1 var(--atelier-label); }
 .primary-button { border: 1px solid var(--button-edge); border-radius: 4px; background: var(--action); color: var(--on-action); box-shadow: 0 1px 2px var(--sheet-shadow); transition: background-color 150ms ease; }
 .primary-button:hover:not(:disabled) { background: var(--action-hover); box-shadow: 0 1px 2px var(--sheet-shadow); transform: none; }
 .primary-button:disabled { border-color: var(--line); background: var(--surface-muted); color: var(--muted); box-shadow: none; }
