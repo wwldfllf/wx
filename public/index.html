@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f5f5f7" />
+    <meta name="theme-color" content="#f6f3eb" />
     <meta
       name="description"
       content="灵感画室：从示例提示词出发，生成或编辑图像，按所需尺寸和格式下载。"
@@ -17,8 +17,8 @@
         document.documentElement.dataset.theme = dark ? "dark" : "light";
       })();
     </script>
-    <link rel="stylesheet" href="/styles.css?v=20261123-studio-editorial" />
-    <link rel="stylesheet" href="/editorial.css?v=20261123-studio-editorial" />
+    <link rel="stylesheet" href="/styles.css?v=20261127-studio-atelier" />
+    <link rel="stylesheet" href="/editorial.css?v=20261127-studio-atelier" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -26,7 +26,7 @@
         <nav class="welcome-nav" aria-label="欢迎页导航">
           <a class="welcome-brand" href="#home" aria-label="返回灵感画室首页">
             <span class="welcome-brand-mark" aria-hidden="true">
-              <i data-lucide="circle"></i>
+              <i data-lucide="aperture"></i>
             </span>
             <span>灵感画室</span>
           </a>
@@ -58,38 +58,38 @@
             <div class="editorial-home">
               <div class="editorial-hero">
                 <div class="welcome-copy">
-                  <p class="editorial-index"><span></span> 图像工作台 <b>·</b> 创作手记 01</p>
-                  <h1 id="welcomeTitle">先构图，<span>再生图。</span></h1>
-                  <p class="welcome-statement">给画面一个明确任务：封面要留刊头，横幅要让出标题位，风景要先定地平线。可以从案例起步，也可以上传参考图再改光线、材质或色调。</p>
+                  <p class="editorial-index"><i aria-hidden="true"></i> 图像创作室 <span lang="it">Studio di immagini</span></p>
+                  <h1 id="welcomeTitle">把想象<span>变成画面。</span></h1>
+                  <p class="welcome-statement">从一句描述开始，或用参考图调整光线、材质和构图。选好比例和分辨率，再把作品带走。</p>
                   <div class="editorial-actions">
                     <button class="welcome-cta" id="startStudioButton" type="button">
-                      <i data-lucide="sparkles" aria-hidden="true"></i><span>开始创作</span>
+                      <span>开始创作</span><i data-lucide="arrow-right" aria-hidden="true"></i>
                     </button>
-                    <button type="button" class="editorial-jump" id="jumpToCases">查看创作案例 <i data-lucide="arrow-down" aria-hidden="true"></i></button>
+                    <button type="button" class="editorial-jump" id="jumpToCases">浏览案例 <i data-lucide="arrow-down" aria-hidden="true"></i></button>
                   </div>
                 </div>
                 <figure class="editorial-cover">
-                  <img class="welcome-reference-art" src="/assets/reference-dream-gallery.jpg" alt="低机位拍摄的玻璃画廊，倒影指向雪山和淡紫色星球" />
-                  <figcaption><span><b>01</b> 玻璃地平线</span><span>广角 · 轴线构图 · 冷暖对照</span></figcaption>
+                  <img class="welcome-reference-art" src="/assets/studio-cobalt-vase.jpg" width="1152" height="839" fetchpriority="high" alt="白色马蹄莲插在钴蓝玻璃瓶里，午后斜光落在浅色石台上" />
+                  <figcaption><span><b>图版 01</b> 午后静物</span><span>玻璃 · 洞石 · 自然光</span></figcaption>
                 </figure>
               </div>
 
               <section class="editorial-shelf" id="studioCases" tabindex="-1" aria-labelledby="casesTitle">
                 <header class="editorial-section-heading">
-                  <div><p>构图练习 / 01–03</p><h2 id="casesTitle">三张图，三种画面任务</h2></div>
-                  <p>选择案例，把画面描述和建议比例带入工作台；不会自动生成。</p>
+                  <div><p>创作案例 / 01–03</p><h2 id="casesTitle">从一张图开始</h2></div>
+                  <p>点击案例，带入提示词和建议比例，再按你的想法修改。</p>
                 </header>
                 <div class="editorial-grid">
                   <button class="editorial-case" type="button" data-preset-size="1024x1280" data-prompt-preset="建筑杂志封面底图，竖幅 4:5。镜头置于玻璃回廊中轴，利用地面反光与立柱导向中心消失点。保留上方四分之一均匀的冷灰留白供刊头，淡紫天光只出现在玻璃边缘，不生成文字、标志或人物。">
-                    <img src="/assets/work-glass-passage.jpg" alt="银灰玻璃回廊" />
+                    <img src="/assets/work-glass-passage.jpg" loading="lazy" alt="银灰玻璃回廊" />
                     <span class="case-body"><span class="case-tag">01 / 杂志封面 · 4:5</span><strong>把刊头留给排版</strong><span class="case-technique">用回廊的消失点抓住视线，上部保持干净。</span><span class="case-link">试用提示词 <i data-lucide="arrow-up-right" aria-hidden="true"></i></span></span>
                   </button>
                   <button class="editorial-case" type="button" data-preset-size="1536x864" data-prompt-preset="建筑品牌网站首页横幅，16:9。清晨云海中的玻璃酒店置于左侧三分点，从外立面四十五度视角取景；逆光只照亮窗框和建筑边缘，右侧保留连续而低对比的云面用于叠加标题。冷灰蓝配色，不生成文字或标志。">
-                    <img src="/assets/work-cloud-window.jpg" alt="云海边的玻璃建筑" />
+                    <img src="/assets/work-cloud-window.jpg" loading="lazy" alt="云海边的玻璃建筑" />
                     <span class="case-body"><span class="case-tag">02 / 品牌横幅 · 16:9</span><strong>给标题让出画面</strong><span class="case-technique">主体靠左，右侧用低对比云海承接文字。</span><span class="case-link">试用提示词 <i data-lucide="arrow-up-right" aria-hidden="true"></i></span></span>
                   </button>
                   <button class="editorial-case" type="button" data-preset-size="1536x768" data-prompt-preset="科幻短片开场静帧，2:1 宽幅。把水平线压在下方三分之一，远山只作轮廓，一颗淡紫行星占据中央偏右。用水面一条细亮反射连接近处和天体，阴影保持深蓝，克制饱和度，细微胶片颗粒。不生成文字。">
-                    <img src="/assets/work-lavender-orbit.jpg" alt="雪山湖面上的淡紫行星" />
+                    <img src="/assets/work-lavender-orbit.jpg" loading="lazy" alt="雪山湖面上的淡紫行星" />
                     <span class="case-body"><span class="case-tag">03 / 电影静帧 · 2:1</span><strong>用低地平线建立尺度</strong><span class="case-technique">缩小山峰和地面比例，让星体成为画面焦点。</span><span class="case-link">试用提示词 <i data-lucide="arrow-up-right" aria-hidden="true"></i></span></span>
                   </button>
                 </div>
@@ -282,7 +282,7 @@
       <header class="topbar">
         <a class="brand" id="studioBrand" href="#welcome" aria-label="返回灵感画室欢迎页">
           <span class="brand-mark" aria-hidden="true">
-            <i data-lucide="circle"></i>
+            <i data-lucide="aperture"></i>
           </span>
           <span>灵感画室</span>
         </a>
@@ -343,8 +343,8 @@
           >
             <section class="page-heading" aria-labelledby="pageTitle">
               <div>
-                <p class="eyebrow">图像创作工作台</p>
-                <h1 id="pageTitle">把想法变成 <span>画面</span></h1>
+                <p class="eyebrow" lang="it">Studio / Immagini</p>
+                <h1 id="pageTitle">创作工作台</h1>
               </div>
               <p class="mode-label" id="modeLabel">文生图</p>
             </section>
@@ -367,9 +367,9 @@
               <textarea
                 id="prompt"
                 name="prompt"
-                rows="8"
+                rows="4"
                 maxlength="8000"
-                placeholder="例如：清晨的玻璃温室，薄雾穿过绿植，电影感光线，细腻真实"
+                placeholder="例如：午后的斜光穿过钴蓝玻璃瓶，石台保留自然纹理，画面左侧留白。"
                 required
               ></textarea>
             </div>
@@ -521,8 +521,8 @@
                   <i data-lucide="frame"></i>
                 </span>
                 <div>
-                  <strong>等待创作</strong>
-                  <p>生成的图片会出现在这里</p>
+                  <strong>画布留白</strong>
+                  <p>提交后，生成的图片会在这里呈现。</p>
                 </div>
               </div>
 
@@ -749,6 +749,6 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/app.js?v=20261123-studio-editorial" type="module"></script>
+    <script src="/app.js?v=20261127-studio-atelier" type="module"></script>
   </body>
 </html>

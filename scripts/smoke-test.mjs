@@ -1,10 +1,11 @@
 const baseUrl = process.env.SMOKE_BASE_URL || "http://localhost:4173";
 
-const [home, styles, app, referenceHero, capabilities, videoResponse] = await Promise.all([
+const [home, styles, editorial, app, referenceHero, capabilities, videoResponse] = await Promise.all([
   readText(`${baseUrl}/`),
   readText(`${baseUrl}/styles.css`),
+  readText(`${baseUrl}/editorial.css`),
   readText(`${baseUrl}/app.js`),
-  readBytes(`${baseUrl}/assets/reference-dream-gallery.jpg`),
+  readBytes(`${baseUrl}/assets/studio-cobalt-vase.jpg`),
   readJson(`${baseUrl}/api/capabilities`),
   fetch(`${baseUrl}/api/video/capabilities`)
 ]);
@@ -15,7 +16,7 @@ const checks = {
     home.includes('id="welcomeExperience"') &&
     home.includes('id="startStudioButton"') &&
     home.includes('class="welcome-reference-art"'),
-  hasReferenceHero: referenceHero.byteLength > 50000,
+  hasReferenceHero: referenceHero.byteLength > 30000 && home.includes("/assets/studio-cobalt-vase.jpg"),
   hasWelcomePages:
     ["Home", "Explore", "Gallery", "Pricing", "About"].every((name) =>
       home.includes(`id="welcomePage${name}"`)
@@ -26,7 +27,7 @@ const checks = {
   hasNoWelcomeDialog:
     !home.includes('id="welcomeQuickForm"') && !home.includes('id="welcomePrompt"'),
   hasChineseWelcome:
-    home.includes("先构图，") &&
+    home.includes("把想象") && home.includes("变成画面") &&
     home.includes("开始创作") &&
     home.includes("电影静帧"),
   hasStudioScene: home.includes('id="studioExperience"'),
@@ -43,17 +44,15 @@ const checks = {
   hasResolution: home.includes('id="resolutionField"') && app.includes("resolutionPresets("),
   hasEditorialHome: home.includes('id="studioCases"') && (home.match(/data-preset-size=/g) || []).length === 3,
   hasCustomSize: home.includes('id="customDimensions"') && home.includes('id="customWidth"') && home.includes('id="customHeight"'),
-  hasThemePicker: (home.match(/data-theme-picker/g) || []).length === 2 && styles.includes('data-theme="dark"'),
+  hasThemePicker: (home.match(/data-theme-picker/g) || []).length === 2 && editorial.includes('data-theme="dark"'),
   hasStarterCases: (home.match(/data-prompt-preset=/g) || []).length >= 6,
   hasVersionedAssets:
-    home.includes("app.js?v=20261123-studio-editorial") &&
-    home.includes("styles.css?v=20261123-studio-editorial") &&
+    home.includes("app.js?v=20261127-studio-atelier") &&
+    home.includes("styles.css?v=20261127-studio-atelier") &&
+    home.includes("editorial.css?v=20261127-studio-atelier") &&
     !home.includes("welcome-scene.js"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
-  hasSlowTransitions:
-    app.includes("ENTER_TRANSITION_MS = 1550") &&
-    app.includes("PLATFORM_TRANSITION_MS = 900") &&
-    styles.includes("welcome-curtain 1500ms"),
+  hasQuietTheme: editorial.includes("--atelier-display") && editorial.includes("prefers-reduced-motion: reduce") && editorial.includes('[data-theme="dark"]'),
   usesBackendStream: app.includes('fetch("/api/generate-stream"'),
   hasNoPublicUpstream:
     !app.includes("api.codeyu.shop") &&
@@ -95,8 +94,8 @@ if (!checks.hasMobileLayout) {
   throw new Error("样式缺少移动端布局。");
 }
 
-if (!checks.hasSlowTransitions) {
-  throw new Error("欢迎页或平台切换动画时序没有更新。");
+if (!checks.hasQuietTheme) {
+  throw new Error("未加载工作台的新主题或减少动效设置。");
 }
 
 if (!checks.usesBackendStream || !checks.hasNoPublicUpstream) {

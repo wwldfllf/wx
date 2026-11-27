@@ -7,8 +7,8 @@ const DEFAULT_SERVER_TIMEOUT_MS = 600000;
 const CAPABILITY_TIMEOUT_MS = 30000;
 const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const ENTER_TRANSITION_MS = 1550;
-const RETURN_TRANSITION_MS = 1350;
+const ENTER_TRANSITION_MS = 240;
+const RETURN_TRANSITION_MS = 240;
 const PLATFORM_TRANSITION_MS = 900;
 const VIDEO_TASK_TIMEOUT_MS = 30 * 60 * 1000;
 const VIDEO_POLL_INTERVAL_MS = 5000;
@@ -253,7 +253,7 @@ function initializeTheme() {
   const apply = () => {
     const dark = preference === "dark" || (preference === "system" && media.matches);
     document.documentElement.dataset.theme = dark ? "dark" : "light";
-    document.querySelector('meta[name="theme-color"]').content = dark ? "#111214" : "#f5f5f7";
+    document.querySelector('meta[name="theme-color"]').content = dark ? "#211e1a" : "#f6f3eb";
     controls.forEach((control) => { control.value = preference; });
   };
   controls.forEach((control) => control.addEventListener("change", () => {
