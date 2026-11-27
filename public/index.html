@@ -17,8 +17,8 @@
         document.documentElement.dataset.theme = dark ? "dark" : "light";
       })();
     </script>
-    <link rel="stylesheet" href="/styles.css?v=20261127-studio-atelier" />
-    <link rel="stylesheet" href="/editorial.css?v=20261127-studio-atelier" />
+    <link rel="stylesheet" href="/styles.css?v=20261127-studio-motion" />
+    <link rel="stylesheet" href="/editorial.css?v=20261127-studio-motion" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -59,7 +59,7 @@
               <div class="editorial-hero">
                 <div class="welcome-copy">
                   <p class="editorial-index"><i aria-hidden="true"></i> 图像创作室 <span lang="it">Studio di immagini</span></p>
-                  <h1 id="welcomeTitle">把想象<span>变成画面。</span></h1>
+                  <h1 id="welcomeTitle"><span class="editorial-title-line">把想象</span><span class="editorial-title-line">变成画面。</span></h1>
                   <p class="welcome-statement">从一句描述开始，或用参考图调整光线、材质和构图。选好比例和分辨率，再把作品带走。</p>
                   <div class="editorial-actions">
                     <button class="welcome-cta" id="startStudioButton" type="button">
@@ -69,7 +69,9 @@
                   </div>
                 </div>
                 <figure class="editorial-cover">
-                  <img class="welcome-reference-art" src="/assets/studio-cobalt-vase.jpg" width="1152" height="839" fetchpriority="high" alt="白色马蹄莲插在钴蓝玻璃瓶里，午后斜光落在浅色石台上" />
+                  <div class="editorial-print">
+                    <img class="welcome-reference-art" src="/assets/studio-cobalt-vase.jpg" width="1152" height="839" fetchpriority="high" alt="白色马蹄莲插在钴蓝玻璃瓶里，午后斜光落在浅色石台上" />
+                  </div>
                   <figcaption><span><b>图版 01</b> 午后静物</span><span>玻璃 · 洞石 · 自然光</span></figcaption>
                 </figure>
               </div>
@@ -749,6 +751,6 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/app.js?v=20261127-studio-atelier" type="module"></script>
+    <script src="/app.js?v=20261127-studio-motion" type="module"></script>
   </body>
 </html>

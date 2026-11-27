@@ -7,8 +7,8 @@ const DEFAULT_SERVER_TIMEOUT_MS = 600000;
 const CAPABILITY_TIMEOUT_MS = 30000;
 const MAX_REFERENCE_BYTES = 20 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const ENTER_TRANSITION_MS = 240;
-const RETURN_TRANSITION_MS = 240;
+const ENTER_TRANSITION_MS = 420;
+const RETURN_TRANSITION_MS = 360;
 const PLATFORM_TRANSITION_MS = 900;
 const VIDEO_TASK_TIMEOUT_MS = 30 * 60 * 1000;
 const VIDEO_POLL_INTERVAL_MS = 5000;
@@ -226,6 +226,8 @@ const formatMenu = createGlassMenu({
     return icon;
   }
 });
+
+let editorialCaseObserver;
 
 init();
 
@@ -550,6 +552,8 @@ function showWelcomePage(pageName, updateHistory) {
     if (active) section.scrollTop = 0;
   });
 
+  syncEditorialCaseReveals(page === "home");
+
   elements.welcomeNavButtons.forEach((button) => {
     const active = button.dataset.welcomePage === page;
     button.classList.toggle("active", active);
@@ -560,6 +564,24 @@ function showWelcomePage(pageName, updateHistory) {
   if (updateHistory && window.location.hash !== `#${page}`) {
     window.history.pushState({ view: "welcome", page }, "", `#${page}`);
   }
+}
+
+function syncEditorialCaseReveals(active) {
+  editorialCaseObserver?.disconnect();
+  if (!active || !("IntersectionObserver" in window)) return;
+
+  const home = elements.welcomePages.find((section) => section.dataset.page === "home");
+  if (!home) return;
+  const revealThreshold = 0.18;
+  editorialCaseObserver ??= new IntersectionObserver((entries, observer) => {
+    for (const { target, intersectionRatio } of entries) {
+      if (intersectionRatio < revealThreshold) continue;
+      target.classList.add("is-revealed");
+      observer.unobserve(target);
+    }
+  }, { root: home, threshold: revealThreshold });
+
+  home.querySelectorAll(".editorial-case:not(.is-revealed)").forEach((card) => editorialCaseObserver.observe(card));
 }
 
 function openGalleryItem(button) {
@@ -593,6 +615,7 @@ function showWelcomeImmediately(page = "home") {
 }
 
 function showStudioImmediately() {
+  syncEditorialCaseReveals(false);
   document.body.classList.remove("welcome-active", "scene-transitioning", "scene-returning");
   document.body.classList.add("studio-active");
   elements.welcomeExperience.hidden = true;
@@ -606,6 +629,7 @@ function showStudioImmediately() {
 function enterStudio(updateHistory) {
   if (state.sceneTransitioning || document.body.classList.contains("studio-active")) return;
 
+  syncEditorialCaseReveals(false);
   state.sceneTransitioning = true;
   elements.studioExperience.setAttribute("aria-hidden", "false");
   elements.studioExperience.inert = false;

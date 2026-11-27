@@ -47,12 +47,14 @@ const checks = {
   hasThemePicker: (home.match(/data-theme-picker/g) || []).length === 2 && editorial.includes('data-theme="dark"'),
   hasStarterCases: (home.match(/data-prompt-preset=/g) || []).length >= 6,
   hasVersionedAssets:
-    home.includes("app.js?v=20261127-studio-atelier") &&
-    home.includes("styles.css?v=20261127-studio-atelier") &&
-    home.includes("editorial.css?v=20261127-studio-atelier") &&
+    home.includes("app.js?v=20261127-studio-motion") &&
+    home.includes("styles.css?v=20261127-studio-motion") &&
+    home.includes("editorial.css?v=20261127-studio-motion") &&
     !home.includes("welcome-scene.js"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
   hasQuietTheme: editorial.includes("--atelier-display") && editorial.includes("prefers-reduced-motion: reduce") && editorial.includes('[data-theme="dark"]'),
+  hasEditorialMotion: home.includes('class="editorial-print"') && editorial.includes("atelier-print-reveal") &&
+    editorial.includes("atelier-turn-out") && app.includes("syncEditorialCaseReveals"),
   usesBackendStream: app.includes('fetch("/api/generate-stream"'),
   hasNoPublicUpstream:
     !app.includes("api.codeyu.shop") &&
@@ -94,7 +96,7 @@ if (!checks.hasMobileLayout) {
   throw new Error("样式缺少移动端布局。");
 }
 
-if (!checks.hasQuietTheme) {
+if (!checks.hasQuietTheme || !checks.hasEditorialMotion) {
   throw new Error("未加载工作台的新主题或减少动效设置。");
 }
 
