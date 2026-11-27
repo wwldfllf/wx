@@ -50,9 +50,9 @@ const checks = {
   hasThemePicker: (home.match(/data-theme-picker/g) || []).length === 2 && editorial.includes('data-theme="dark"'),
   hasStarterCases: (home.match(/data-prompt-preset=/g) || []).length >= 6,
   hasVersionedAssets:
-    home.includes("app.js?v=20261127-studio-motion") &&
+    home.includes("app.js?v=20261127-workbench") &&
     home.includes("styles.css?v=20261127-studio-motion") &&
-    home.includes("editorial.css?v=20261127-studio-motion") &&
+    home.includes("editorial.css?v=20261127-workbench") &&
     !home.includes("welcome-scene.js"),
   hasMobileLayout: styles.includes("@media (max-width: 560px)"),
   hasQuietTheme: editorial.includes("--atelier-display") && editorial.includes("prefers-reduced-motion: reduce") && editorial.includes('[data-theme="dark"]'),

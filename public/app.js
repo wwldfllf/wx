@@ -106,7 +106,6 @@ const elements = {
   platformStage: document.querySelector("#platformStage"),
   platformTabs: Array.from(document.querySelectorAll("[data-platform]")),
   platformPanes: Array.from(document.querySelectorAll("[data-platform-pane]")),
-  pageTitle: document.querySelector("#pageTitle"),
   form: document.querySelector("#generateForm"),
   prompt: document.querySelector("#prompt"),
   promptCount: document.querySelector("#promptCount"),
@@ -729,13 +728,12 @@ async function loadCapabilities() {
     renderCapabilities(body);
     applyPresetSize();
     elements.legacySettingsHint.hidden = Boolean(getSelectedModel()?.customSize);
-    elements.capabilitySource.textContent = "当前模型配置";
     elements.submitButton.disabled = false;
     if (state.activePlatform === "image") setStatus("ready", "图片服务已连接");
   } catch (error) {
     state.backendReady = false;
     elements.submitButton.disabled = true;
-    elements.capabilitySource.textContent = "探测失败";
+    elements.capabilitySource.textContent = "模型未连接";
     if (state.activePlatform === "image") setStatus("error", "图片服务未连接");
 
     const message =
@@ -828,7 +826,13 @@ function renderModels(models, defaultModel) {
 
   const preferred = models.some((model) => model.id === previous) ? previous : defaultModel;
   if (preferred) elements.model.value = preferred;
-  elements.model.disabled = models.length <= 1;
+  const hasModelChoice = models.length > 1;
+  elements.model.disabled = !hasModelChoice;
+  elements.model.hidden = !hasModelChoice;
+  elements.capabilitySource.hidden = hasModelChoice;
+  if (state.backendReady && !hasModelChoice) {
+    elements.capabilitySource.textContent = elements.model.selectedOptions[0]?.textContent || "未配置模型";
+  }
   renderParameterOptions(getSelectedModel());
 }
 
@@ -850,9 +854,9 @@ function renderResolutionOptions() {
   const previousTier = select.selectedIndex;
   const model = getSelectedModel();
   const options = resolutionPresets(elements.size.value, model?.customSize);
-  const names = ["标准", "高分辨率", "最高分辨率"];
+  const names = ["标准", "高清", "最高"];
   fillSelect(select, options, Object.fromEntries(options.map((size, index) =>
-    [size, `${names[index]} · ${size.replace("x", " × ")}`]
+    [size, `${size.replace("x", "×")} · ${names[index]}`]
   )));
   elements.resolutionField.hidden = options.length < 2;
   if (options.length > 1) select.selectedIndex = Math.min(previousTier >= 0 ? previousTier : 1, options.length - 1);

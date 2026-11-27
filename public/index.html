@@ -18,7 +18,7 @@
       })();
     </script>
     <link rel="stylesheet" href="/styles.css?v=20261127-studio-motion" />
-    <link rel="stylesheet" href="/editorial.css?v=20261127-studio-motion" />
+    <link rel="stylesheet" href="/editorial.css?v=20261127-workbench" />
   </head>
   <body class="welcome-active">
     <div class="welcome-experience" id="welcomeExperience">
@@ -306,34 +306,39 @@
       </header>
 
       <main class="app-shell">
-        <div class="platform-switch" id="platformSwitch" role="tablist" aria-label="生成平台">
-          <span class="platform-switch-indicator" aria-hidden="true"></span>
-          <button
-            class="active"
-            id="imagePlatformTab"
-            type="button"
-            role="tab"
-            aria-selected="true"
-            aria-controls="imagePlatformPane"
-            data-platform="image"
-          >
-            <i data-lucide="image" aria-hidden="true"></i>
-            <span>图片生成</span>
-          </button>
-          <button
-            id="videoPlatformTab"
-            type="button"
-            role="tab"
-            aria-selected="false"
-            aria-controls="videoPlatformPane"
-            aria-label="视频生成（暂未开放）"
-            data-platform="video"
-            disabled
-          >
-            <i data-lucide="video" aria-hidden="true"></i>
-            <span>视频生成</span><small class="platform-badge">暂未开放</small>
-          </button>
-        </div>
+        <header class="page-heading workbench-heading">
+          <div>
+            <p class="eyebrow" lang="it">Studio / Immagini</p>
+            <h1 id="pageTitle">创作工作台</h1>
+          </div>
+          <div class="platform-switch" id="platformSwitch" role="tablist" aria-label="生成平台">
+            <button
+              class="active"
+              id="imagePlatformTab"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="imagePlatformPane"
+              data-platform="image"
+            >
+              <i data-lucide="image" aria-hidden="true"></i>
+              <span>图片生成</span>
+            </button>
+            <button
+              id="videoPlatformTab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="videoPlatformPane"
+              aria-label="视频生成（暂未开放）"
+              data-platform="video"
+              disabled
+            >
+              <i data-lucide="video" aria-hidden="true"></i>
+              <span>视频生成</span><small class="platform-badge">暂未开放</small>
+            </button>
+          </div>
+        </header>
 
         <div class="platform-stage" id="platformStage">
           <section
@@ -343,37 +348,22 @@
             aria-labelledby="imagePlatformTab"
             data-platform-pane="image"
           >
-            <section class="page-heading" aria-labelledby="pageTitle">
-              <div>
-                <p class="eyebrow" lang="it">Studio / Immagini</p>
-                <h1 id="pageTitle">创作工作台</h1>
-              </div>
-              <p class="mode-label" id="modeLabel">文生图</p>
-            </section>
-
             <section class="workspace">
           <form class="control-panel" id="generateForm">
-            <header class="panel-heading">
-              <span class="section-index">01</span>
-              <div>
-                <p class="panel-kicker">创作</p>
-                <h2>描述你的画面</h2>
-              </div>
-            </header>
-
             <div class="field prompt-field">
-              <div class="field-label-row">
-                <label for="prompt">画面描述</label>
-                <span id="promptCount">0 / 8000</span>
+              <div class="field-label-row prompt-heading">
+                <h2><label for="prompt">画面描述</label></h2>
+                <p class="mode-label" id="modeLabel">文生图</p>
               </div>
               <textarea
                 id="prompt"
                 name="prompt"
                 rows="4"
                 maxlength="8000"
-                placeholder="例如：午后的斜光穿过钴蓝玻璃瓶，石台保留自然纹理，画面左侧留白。"
+                placeholder="例如：一束午后光照进石拱门，墙面保留细墨线和纸纹，右侧留白。"
                 required
               ></textarea>
+              <span class="prompt-count" id="promptCount">0 / 8000</span>
             </div>
 
             <div class="reference-block">
@@ -419,15 +409,13 @@
             <div class="settings-block">
               <div class="field-label-row">
                 <span class="group-label">生成设置</span>
-                <span id="capabilitySource">等待探测</span>
+                <div class="model-setting">
+                  <span id="capabilitySource">正在读取模型</span>
+                  <select id="model" name="model" aria-label="模型" hidden></select>
+                </div>
               </div>
 
               <div class="param-grid">
-                <div class="field">
-                  <label for="model">模型</label>
-                  <select id="model" name="model" aria-label="模型"></select>
-                </div>
-
                 <div class="field">
                   <span class="field-control-label" id="sizeLabel">比例</span>
                   <div class="glass-select" id="sizeMenu">
@@ -459,6 +447,17 @@
                   </div>
                 </div>
 
+                <div class="field resolution-field" id="resolutionField" hidden>
+                  <label for="resolution">分辨率</label>
+                  <select id="resolution" aria-describedby="qualityHint" disabled></select>
+                </div>
+                <fieldset class="custom-dimensions" id="customDimensions" hidden disabled aria-describedby="customSizeHint">
+                  <legend>自定义尺寸 · px</legend>
+                  <label for="customWidth">宽<input id="customWidth" type="number" inputmode="numeric" value="1024" required /></label>
+                  <label for="customHeight">高<input id="customHeight" type="number" inputmode="numeric" value="768" required /></label>
+                  <p id="customSizeHint"></p>
+                </fieldset>
+
                 <div class="field">
                   <label for="quality">生成质量</label>
                   <select id="quality" name="quality" aria-label="生成质量"></select>
@@ -476,17 +475,7 @@
                   </div>
                 </div>
               </div>
-              <div class="field resolution-field" id="resolutionField" hidden>
-                <label for="resolution">分辨率</label>
-                <select id="resolution" aria-describedby="qualityHint" disabled></select>
-              </div>
-              <fieldset class="custom-dimensions" id="customDimensions" hidden disabled aria-describedby="customSizeHint">
-                <legend>自定义尺寸 · px</legend>
-                <label for="customWidth">宽<input id="customWidth" type="number" inputmode="numeric" value="1024" required /></label>
-                <label for="customHeight">高<input id="customHeight" type="number" inputmode="numeric" value="768" required /></label>
-                <p id="customSizeHint"></p>
-              </fieldset>
-              <p class="parameter-note" id="qualityHint" hidden>分辨率决定像素大小；生成质量是传给供应商的处理档位。</p>
+              <p class="parameter-note" id="qualityHint" hidden>分辨率决定像素大小；生成质量是模型的处理档位。</p>
               <p class="parameter-note" id="legacySettingsHint" hidden>当前连接使用基础模型；切换到 GPT Image 2.6 后可选择自定义比例和更多生成质量。</p>
             </div>
 
@@ -496,15 +485,9 @@
             </button>
           </form>
 
-          <section class="result-panel" aria-live="polite">
+          <section class="result-panel" aria-labelledby="previewTitle" aria-live="polite">
             <header class="result-header">
-              <div class="panel-heading compact">
-                <span class="section-index">02</span>
-                <div>
-                  <p class="panel-kicker">预览</p>
-                  <h2>生成结果</h2>
-                </div>
-              </div>
+              <h2 id="previewTitle">预览</h2>
 
               <button
                 class="download-button"
@@ -523,8 +506,8 @@
                   <i data-lucide="frame"></i>
                 </span>
                 <div>
-                  <strong>画布留白</strong>
-                  <p>提交后，生成的图片会在这里呈现。</p>
+                  <strong>还没有生成图片</strong>
+                  <p>写下画面描述，生成后在这里预览。</p>
                 </div>
               </div>
 
@@ -751,6 +734,6 @@
     </div>
 
     <script src="/vendor/lucide.min.js?v=0.468.0"></script>
-    <script src="/app.js?v=20261127-studio-motion" type="module"></script>
+    <script src="/app.js?v=20261127-workbench" type="module"></script>
   </body>
 </html>
