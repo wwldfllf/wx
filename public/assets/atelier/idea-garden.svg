@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1152" height="839" viewBox="0 0 1152 839" fill="none">
+  <defs>
+    <radialGradient id="paper" cx=".46" cy=".35" r=".76">
+      <stop stop-color="#faf2e1"/><stop offset="1" stop-color="#e9d1b3"/>
+    </radialGradient>
+    <pattern id="fibers" width="62" height="48" patternUnits="userSpaceOnUse">
+      <path d="m2 9 3-.4m15 10 2 .3m26-12 4 .3M11 36l2 .4m21 7 2-.6m18-13 3 .5" stroke="#805c42" stroke-opacity=".19" stroke-width=".9" stroke-linecap="round"/>
+      <path d="m14 3 1 .8m23 23 .8 1M3 44l1-.5m45-28 1 .3m10 30 1-.6" stroke="#fff9e9" stroke-opacity=".78" stroke-linecap="round"/>
+    </pattern>
+    <pattern id="sha" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">
+      <path d="M1 0v8M5 1v2" stroke="#6c493a" stroke-opacity=".24" stroke-width=".8"/>
+    </pattern>
+    <pattern id="sunshade" width="7" height="7" patternUnits="userSpaceOnUse">
+      <path d="M0 6h7M1 2h2" stroke="#783c30" stroke-opacity=".21" stroke-width=".85"/>
+    </pattern>
+    <path id="leaf" d="M0 0C6-16 29-25 49-18 36-5 18 5 0 0Z"/>
+    <path id="slender" d="M0 0C9-10 24-15 37-10 26-1 14 3 0 0Z"/>
+  </defs>
+  <path fill="url(#paper)" d="M0 0h1152v839H0z"/>
+  <path fill="url(#fibers)" d="M0 0h1152v839H0z"/>
+  <g stroke="#77563f" stroke-opacity=".30" stroke-width="1.4">
+    <path d="M82 112V82h30m928 0h30v30m0 615v30h-30m-928 0H82v-30"/>
+    <path d="M567 82h18m-9-9v18m-9 666h18m-9-9v18" stroke-width="1"/>
+  </g>
+  <g stroke="#a47b56" stroke-width="1.25" opacity=".67">
+    <path d="M277 415C229 298 371 204 586 189c212-15 393 43 413 125 19 81-132 168-342 190-210 22-386-27-408-106" stroke-dasharray="2 7"/>
+    <path d="M212 526c82-101 229-31 407-87 186-58 259-166 328-141 16 6 25 21 19 36" stroke-dasharray="2 8"/>
+    <path d="M246 452v19m-9-10h18m603-290v25m-12-13h24m80 230v18m-9-9h18" stroke-linecap="round"/>
+    <circle cx="317" cy="220" r="4" fill="#a47b56" stroke="none"/>
+    <circle cx="903" cy="344" r="3" fill="#a47b56" stroke="none"/>
+  </g>
+  <g stroke="#543c30" stroke-linecap="round" stroke-linejoin="round">
+    <!-- A sun printed slightly off-register, above the notebook garden. -->
+    <circle cx="731" cy="288" r="101" fill="#e1a485" fill-opacity=".28" stroke="#b47b5d" stroke-width="1.25"/>
+    <circle cx="723" cy="279" r="91" fill="#c67e63" stroke="#784b38" stroke-width="1.9"/>
+    <circle cx="723" cy="279" r="89" fill="url(#sunshade)" stroke="none"/>
+    <path d="M638 295c45 9 117 7 170-7m-158 33c43 7 89 4 148-8m-133 31c34 6 77 3 109-4" stroke="#f4cbb0" stroke-width="1.05" opacity=".69"/>
+    <path d="M456 210c9-7 18-7 26 2 7-8 17-11 27-6m-92 38c7-3 12-2 17 2 4-6 10-8 17-7m444-7c6-3 13-2 19 4 5-7 12-10 20-8" stroke-width="1.65"/>
+    <!-- Architectural fragments grow out of the gutter. -->
+    <path d="M311 585V445c0-69 44-126 106-126 54 0 98 49 98 113v153H311Z" fill="#e7cb9e" stroke-width="2.5"/>
+    <path d="M311 585V445c0-72 46-127 106-126 55 1 98 50 98 113v153h-23V435c0-53-33-92-76-92-47 0-82 43-82 100v142h-23Z" fill="url(#sha)" stroke-width="1.55"/>
+    <path d="M365 584v-136c0-41 24-70 52-70 29 0 51 32 51 70v135" fill="#f4e4c9" stroke-width="1.7"/>
+    <path d="M349 584V445c0-48 29-85 68-85 37 0 65 35 65 83v142" stroke="#876148" stroke-width="1.2"/>
+    <path d="M313 460h21m-21 14h20m-20 73h20m-20 12h20m161-101h19m-19 16h19m-19 76h19m-19 12h19m-190-152 19 8m2-45 17 12m24-42 9 20m38-31-1 21m45-10-10 18m44 17-17 11" stroke="#85634c" stroke-width="1.05"/>
+    <path d="M740 597c14-61 56-110 110-134 42-18 69-39 90-62-10 78-52 156-133 197h-67Z" fill="#d1b38b" stroke-width="1.9"/>
+    <path d="M769 585c27-39 57-65 93-84 28-14 48-31 65-56m-142 139c28-35 59-53 88-72 14-9 27-20 37-29m-109 103c19-23 46-41 63-49" stroke="#755640" stroke-width="1.15"/>
+    <path d="M797 592c26-1 57-1 77 5m-124 2c65-78 37-130 80-206 20 50 12 121-46 199" fill="#ac9f81" stroke-width="1.9"/>
+    <path d="M772 590c40-63 52-121 58-192m-39 148 26-49m-20 17c14-25 16-55 22-77" stroke="#615e4b" stroke-width="1.1"/>
+    <!-- Olive branches: each leaf changes angle and scale. -->
+    <path d="M574 594c-3-91-30-204 9-305m-16 205c-30-58-68-96-114-121m119 165c34-67 76-104 131-124m-124 139c49-23 102-27 145-27" stroke="#494338" stroke-width="2.5"/>
+    <g fill="#87917b" stroke="#514d3d" stroke-width="1.3">
+      <use href="#leaf" transform="translate(582 296) rotate(-68) scale(.85)"/>
+      <use href="#leaf" transform="translate(570 331) rotate(-32) scale(1.12)"/>
+      <use href="#leaf" transform="translate(566 351) rotate(208) scale(1.06)"/>
+      <use href="#leaf" transform="translate(563 380) rotate(-20) scale(1.14)"/>
+      <use href="#leaf" transform="translate(562 400) rotate(193) scale(1.12)"/>
+      <use href="#leaf" transform="translate(564 429) rotate(-15) scale(.94)"/>
+      <use href="#slender" transform="translate(566 457) rotate(191) scale(1.07)"/>
+      <use href="#leaf" transform="translate(475 385) rotate(205) scale(.93)"/>
+      <use href="#leaf" transform="translate(493 396) rotate(-88) scale(.9)"/>
+      <use href="#leaf" transform="translate(506 408) rotate(193) scale(1.08)"/>
+      <use href="#leaf" transform="translate(529 430) rotate(-81) scale(.87)"/>
+      <use href="#slender" transform="translate(538 445) rotate(184) scale(1.18)"/>
+      <use href="#leaf" transform="translate(690 419) rotate(-23) scale(.84)"/>
+      <use href="#leaf" transform="translate(670 429) rotate(-68) scale(1.05)"/>
+      <use href="#leaf" transform="translate(650 441) rotate(19) scale(1.14)"/>
+      <use href="#leaf" transform="translate(635 454) rotate(-83) scale(1.02)"/>
+      <use href="#leaf" transform="translate(615 475) rotate(14) scale(.98)"/>
+      <use href="#leaf" transform="translate(603 490) rotate(-85) scale(.76)"/>
+      <use href="#slender" transform="translate(710 526) rotate(-12) scale(.96)"/>
+      <use href="#slender" transform="translate(682 528) rotate(-46) scale(.93)"/>
+      <use href="#slender" transform="translate(657 533) rotate(24) scale(.88)"/>
+      <use href="#slender" transform="translate(633 537) rotate(-52) scale(.8)"/>
+    </g>
+    <path d="M565 328c22-16 34-22 46-22m-48 43c-15-12-29-21-44-21m45 54c20-10 34-15 47-14m38 75c20 1 32 1 49-6m-26-9c4-17 9-27 20-39m-184 20c-19-4-33-4-50-1" stroke="#e1d5b6" stroke-width=".95" opacity=".78"/>
+    <g fill="#b76e56" stroke="#7a503d" stroke-width="1.05">
+      <circle cx="526" cy="361" r="5"/><circle cx="517" cy="368" r="3.6"/><circle cx="617" cy="423" r="4.2"/><circle cx="605" cy="415" r="3.8"/><circle cx="737" cy="506" r="4"/>
+    </g>
+    <!-- A bound sketchbook with ink rules and a cloth bookmark. -->
+    <path d="M184 714c59-35 180-52 402-59 209-5 348 15 407 35-76 31-211 36-420 45-196 6-330 5-389-21Z" fill="#b18a65" fill-opacity=".15" stroke="none"/>
+    <path d="M218 669c88-12 181-95 328-88 19 1 26 7 39 12 14-6 26-11 42-13 130-20 227 29 301 52l-24 46c-125-6-215 27-300 40l-37 2c-86-23-191-17-317 5l-32-56Z" fill="#815a46" stroke-width="2.35"/>
+    <path d="M228 657c114-26 214-90 314-83 22 1 34 6 45 17 9-6 32-15 55-17 115-11 193 30 279 51l-22 42c-111-5-210 34-299 45-11 2-22 2-33-2-95-23-190-21-313 2l-26-55Z" fill="#e6cba3" stroke-width="2.3"/>
+    <path d="M236 663c111-28 217-75 304-73 20 1 36 8 46 15 18-9 39-13 56-15 98-5 208 39 269 43m-669 41c101-24 210-65 298-68 17 0 37 7 45 12 17-7 36-10 59-13 92-8 191 36 262 36m-658 45c110-25 213-59 293-57 20 0 34 3 46 7 14-4 29-9 54-12 100-11 195 28 260 26m-648 45c124-29 226-42 302-32 10 2 22 7 33 6 95-12 188-52 309-52" stroke="#977454" stroke-width="1.15" opacity=".8"/>
+    <path d="M227 654c99-31 192-112 294-105 31 2 52 15 65 36 21-23 55-36 98-38 92-5 163 45 238 77-180-8-238 26-336 42-102-35-214-40-343 20l-16-32Z" fill="#fbedd3" stroke-width="2.7"/>
+    <path d="M586 585c-5 22-4 53 0 81m-334 9c150-57 221-45 330-14m9 0c112-17 166-44 306-39" stroke="#a67d55" stroke-width="1.4"/>
+    <path d="M290 644c81-34 146-65 214-70m-185 70c76-29 154-60 211-56m-143 42c55-18 103-29 153-24m-118 25c43-9 85-13 125-8m75-24c34-20 83-21 127-18m-130 34c66-20 111-24 178-13m-177 29c74-19 122-24 187-20" stroke="#927252" stroke-opacity=".63" stroke-width="1.15"/>
+    <path d="M598 691c2 13 10 32 25 50l7-11 16 3c-15-15-26-30-31-45l-17 3Z" fill="#ab604e" stroke-width="1.85"/>
+  </g>
+</svg>

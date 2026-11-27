@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" fill="none">
+  <defs>
+    <pattern id="grain" width="51" height="37" patternUnits="userSpaceOnUse"><path d="m2 6 2 .4m17 6 2-.3m19-9 4 .8M9 26l2 .3m19 7 4-.6m13-10 2 .4" stroke="#715443" stroke-opacity=".22" stroke-width=".8" stroke-linecap="round"/></pattern>
+    <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(31)"><path d="M1 0v7M5 1v2" stroke="#593e34" stroke-opacity=".24" stroke-width=".85"/></pattern>
+    <clipPath id="trim"><path d="M312 57h336v420H312z"/></clipPath>
+  </defs>
+  <path fill="#d4bd9d" d="M0 0h960v540H0z"/>
+  <path fill="url(#grain)" d="M0 0h960v540H0z"/>
+  <path fill="#684b3c" fill-opacity=".17" d="M324 67h337v423H324z"/>
+  <path fill="#f4e5ca" stroke="#8f6e55" stroke-width="1.25" d="M312 57h336v420H312z"/>
+  <g clip-path="url(#trim)" stroke="#594036" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M312 57h336v420H312z" fill="url(#grain)" stroke="none"/>
+    <circle cx="481" cy="221" r="61" fill="#ca886c" stroke-width="1.4"/>
+    <path d="M426 247h111m-115-9h117m-119-9h121m-116 27h111m-104 9h94" stroke="#edb59a" stroke-width="1" opacity=".8"/>
+    <path d="M306 416c150-15 253-13 355 3m-359 24c117-14 234-6 361 4m-336 19c83-10 157-8 214-3" stroke="#9a7459" stroke-opacity=".62" stroke-width="1.15"/>
+    <path d="M385 436V335c0-57 40-98 93-99 55-2 97 40 97 95v105h-40V336c0-34-24-61-55-61-32 0-57 27-57 61v100h-38Z" fill="#dcb988" stroke-width="2.2"/>
+    <path d="M394 436V333c0-45 31-86 84-87 41-1 86 29 86 87v103h-15V333c0-38-30-73-69-72-40 1-70 36-70 73v102h-16Z" fill="url(#hatch)" stroke-width="1.15"/>
+    <path d="M385 348h36m-36 23h36m-36 27h36m-33-96 33 14m-19-41 28 23m4-51 20 32m25-43v37m48-26-16 36m42-13-25 28m43 8-37 13m41 31h-37m37 24h-37m37 25h-37" stroke="#987051" stroke-width="1.05"/>
+    <path d="M449 435c12-46 25-73 31-122 19 39 24 80 15 122" fill="#7b8268" stroke-width="1.55"/>
+    <path d="M481 433c-1-42 4-72 0-115m-4 79-6-26m12 40 9-24m-14-9 6-20" stroke="#444835" stroke-width="1.05"/>
+    <path d="M369 437h222l14 12H353l16-12Zm-16 12h252v9H353z" fill="#cda678" stroke-width="1.4"/>
+    <path d="M314 476c73-7 136-8 206-5s89 7 133 0" stroke="#a77f60" stroke-width="1"/>
+  </g>
+  <path d="M278 57h19m15-34v19m355 15h19m-38-34v19m-370 435h19m15 16v19m355-35h19m-38 16v19" stroke="#7c5b47" stroke-opacity=".45" stroke-width="1.15"/>
+</svg>

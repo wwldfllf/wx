@@ -1,11 +1,13 @@
 const baseUrl = process.env.SMOKE_BASE_URL || "http://localhost:4173";
 
-const [home, styles, editorial, app, referenceHero, capabilities, videoResponse] = await Promise.all([
+const illustrationFiles = ["idea-garden.svg", "quiet-arch.svg", "olive-study.svg", "low-tide.svg"];
+
+const [home, styles, editorial, app, illustrations, capabilities, videoResponse] = await Promise.all([
   readText(`${baseUrl}/`),
   readText(`${baseUrl}/styles.css`),
   readText(`${baseUrl}/editorial.css`),
   readText(`${baseUrl}/app.js`),
-  readBytes(`${baseUrl}/assets/studio-cobalt-vase.jpg`),
+  Promise.all(illustrationFiles.map((file) => readIllustration(`${baseUrl}/assets/atelier/${file}`))),
   readJson(`${baseUrl}/api/capabilities`),
   fetch(`${baseUrl}/api/video/capabilities`)
 ]);
@@ -16,7 +18,9 @@ const checks = {
     home.includes('id="welcomeExperience"') &&
     home.includes('id="startStudioButton"') &&
     home.includes('class="welcome-reference-art"'),
-  hasReferenceHero: referenceHero.byteLength > 30000 && home.includes("/assets/studio-cobalt-vase.jpg"),
+  hasAtelierIllustrations:
+    illustrationFiles.every((file, index) => home.includes(`src="/assets/atelier/${file}"`) && illustrations[index]) &&
+    !home.includes('src="/assets/studio-cobalt-vase.jpg"'),
   hasWelcomePages:
     ["Home", "Explore", "Gallery", "Pricing", "About"].every((name) =>
       home.includes(`id="welcomePage${name}"`)
@@ -28,8 +32,7 @@ const checks = {
     !home.includes('id="welcomeQuickForm"') && !home.includes('id="welcomePrompt"'),
   hasChineseWelcome:
     home.includes("把想象") && home.includes("变成画面") &&
-    home.includes("开始创作") &&
-    home.includes("电影静帧"),
+    home.includes("开始创作") && home.includes("试用提示词"),
   hasStudioScene: home.includes('id="studioExperience"'),
   hasNoApiKeyInput: !home.includes('id="apiKey"') && !home.includes('name="api_key"'),
   hasPrompt: home.includes('id="prompt"'),
@@ -68,10 +71,13 @@ const checks = {
   videoStatus: videoResponse.status
 };
 
+if (!checks.hasAtelierIllustrations) {
+  throw new Error("首屏或案例缺少新版插画资源。");
+}
+
 if (
   !checks.hasTitle ||
   !checks.hasWelcomeScene ||
-  !checks.hasReferenceHero ||
   !checks.hasWelcomePages ||
   !checks.hasNoTopStartButton ||
   !checks.hasNoWelcomeDialog ||
@@ -123,12 +129,11 @@ async function readText(url) {
   return response.text();
 }
 
-async function readBytes(url) {
+async function readIllustration(url) {
   const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`${url} returned ${response.status}`);
-  }
-  return response.arrayBuffer();
+  if (!response.ok || !response.headers.get("content-type")?.startsWith("image/svg+xml")) return false;
+  const svg = await response.text();
+  return /^<svg\b/.test(svg) && svg.includes("viewBox=") && svg.trimEnd().endsWith("</svg>");
 }
 
 async function readJson(url) {
