@@ -1,5 +1,5 @@
 // Backed by a native select to keep option state and existing change handlers in sync.
-export function createGlassMenu({ root, trigger, list, select, value, decorate, summary, onSelect }) {
+export function createGlassMenu({ root, trigger, list, select, value, summary, onSelect }) {
   let rows = [];
   let open = false;
 
@@ -62,7 +62,7 @@ export function createGlassMenu({ root, trigger, list, select, value, decorate, 
       const check = document.createElement("span");
       check.className = "option-check";
       check.setAttribute("aria-hidden", "true");
-      row.append(decorate(option), label, check);
+      row.append(label, check);
       row.addEventListener("click", () => {
         select.value = option.value;
         close(true);

@@ -39,6 +39,12 @@ async page => {
     assert(await trigger.count() === 1, `${name} still lacks the shared dropdown trigger`);
     await trigger.press('ArrowDown');
     const menu = page.locator(`#${name}MenuList`);
+    assert(await trigger.evaluate(el => parseFloat(getComputedStyle(el).fontSize) >= 14), `${name} trigger uses small type`);
+    assert(await menu.getByRole('option').evaluateAll(rows => rows.length > 0 && rows.every(row => {
+      const label = row.querySelector('strong');
+      return label && row.children.length === 2 && row.lastElementChild.classList.contains('option-check') &&
+        row.textContent.trim() === label.textContent.trim() && parseFloat(getComputedStyle(label).fontSize) >= 14;
+    })), `${name} must show only a readable label and the selection tick`);
     assert(await menu.isVisible() && await menu.getByRole('option', {selected:true}).count() === 1, `${name} lacks shared list or selection state`);
     assert(await menu.evaluate(el => el.classList.contains('glass-select-popover')), `${name} is not using the shared popover styling`);
     await page.keyboard.press('Escape');

@@ -1,5 +1,5 @@
 import { exportImage } from "./image-export.js?v=20261123-image26";
-import { createGlassMenu } from "./glass-menu.js?v=20261127-unified-menus";
+import { createGlassMenu } from "./glass-menu.js?v=20261128-readable-menus";
 import { resolutionPresets } from "./image-dimensions.js?v=20261123-studio-editorial";
 
 const GENERATION_TIMEOUT_MS = 630000;
@@ -191,24 +191,7 @@ function createParameterMenu(name, select, options) {
   });
 }
 
-function menuBadge(text) {
-  const badge = document.createElement("span");
-  badge.className = "parameter-badge";
-  badge.setAttribute("aria-hidden", "true");
-  badge.textContent = text;
-  return badge;
-}
-
 const sizeMenu = createParameterMenu("size", elements.size, {
-  decorate(option) {
-    const shape = document.createElement("span");
-    shape.className = "ratio-shape";
-    shape.setAttribute("aria-hidden", "true");
-    const { width, height } = ratioShapeDimensions(option.value);
-    shape.style.setProperty("--ratio-width", `${width}px`);
-    shape.style.setProperty("--ratio-height", `${height}px`);
-    return shape;
-  },
   summary(option) {
     const size = option?.value === "custom" && selectedSize();
     return size ? `自定义 · ${size.replace("x", " × ")}` : "";
@@ -218,18 +201,10 @@ const sizeMenu = createParameterMenu("size", elements.size, {
   }
 });
 
-const resolutionMenu = createParameterMenu("resolution", elements.resolution, {
-  decorate: (option) => menuBadge(`0${option.index + 1}`)
-});
-const qualityMenu = createParameterMenu("quality", elements.quality, {
-  decorate: (option) => menuBadge({ auto: "A", low: "L", medium: "M", high: "H" }[option.value] || "—")
-});
-const formatMenu = createParameterMenu("format", elements.outputFormat, {
-  decorate: (option) => menuBadge({ png: "P", jpeg: "J", webp: "W" }[option.value] || "·")
-});
-const modelMenu = createParameterMenu("model", elements.model, {
-  decorate: () => menuBadge("AI")
-});
+const resolutionMenu = createParameterMenu("resolution", elements.resolution);
+const qualityMenu = createParameterMenu("quality", elements.quality);
+const formatMenu = createParameterMenu("format", elements.outputFormat);
+const modelMenu = createParameterMenu("model", elements.model);
 
 let editorialCaseObserver;
 
@@ -524,14 +499,6 @@ function updatePlatformStatus() {
   if (state.generationController) setStatus("busy", "正在生成图片");
   else if (state.backendReady) setStatus("ready", "图片服务已连接");
   else setStatus("error", "图片服务未连接");
-}
-
-function ratioShapeDimensions(value) {
-  const match = String(value).match(/^(\d+)x(\d+)$/);
-  if (!match) return { width: 22, height: 18 };
-  const ratio = Number(match[1]) / Number(match[2]);
-  if (ratio >= 1) return { width: 24, height: Math.max(11, Math.round(24 / ratio)) };
-  return { width: Math.max(11, Math.round(24 * ratio)), height: 24 };
 }
 
 function applyPresetSize() {
